@@ -1,7 +1,86 @@
-pluings:
-
-  resources:
+plugins:
+  rsm:
     executor: central_deployment_agent
-    package_name: cloudify_resources
-    source: https://github.com/Cloudify-PS/cloudify-rms-plugin/archive/master.zip
+    package_name: cloudify_resource_management
+    source: cloudify-rsm-plugin
     package_version: '0.0.1'
+
+node_types:
+  cloudify.nodes.resource_management.Usage:
+    derived_from: cloudify.nodes.Root
+    properties:
+      system_name:
+        type: string
+        required: true
+        description: >
+          Name of system which is owning this kind of resource.
+          Name 'system' is general because it may be e.g.
+          VIM (like Openstack), NMS / EMS or even single device.
+          This name should be used to assign given resource type
+          to some top level category.
+      resource_name:
+        type: string
+        description: >
+          Name of resource which will be used as identifier
+          e.g. 'security_group' or 'floating_ip'
+          for 'openstack' system_name
+      scope:
+        type: string
+        default: 'project'
+        description: >
+          project - it means that 'list' operation for this resource type
+          it returning items only for single tenant / project / subpart of the system
+          global - it means that 'list' operation for this resource type
+          it returning items from whole system
+      list_operation_inputs: #TODO
+        default: {}
+      list_operation_runtime_property_name:
+        type: string
+    interfaces:
+      cloudify.interfaces.operations:
+        list: #list instances of given resource
+          implementation: ~
+
+  cloudify.nodes.resource_management.Quota:
+    derived_from: cloudify.nodes.Root
+    properties:
+      system_name:
+        type: string
+        required: true
+        description: >
+          Name of system which is owning this kind of resource.
+          Name 'system' is general because it may be e.g.
+          VIM (like Openstack), NMS / EMS or even single device.
+          This name should be used to assign given resource type
+          to some top level category.
+      resource_name:
+        type: string
+        description: >
+          Name of resource which will be used as identifier
+          e.g. 'security_group' or 'floating_ip'
+          for 'openstack' system_name
+      scope:
+        type: string
+        default: 'project'
+        description: >
+          project - it means that this node_template is able to
+          manage qouta for all resource types in one of system projects
+          global - it means that this node_template is able
+          to manage qouta for all resource types in system
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: #create of get qouta
+          implementation: ~
+        update: #updates qouta
+          implementation: ~
+
+  cloudify.nodes.resource_management.Project:
+    derived_from: cloudify.nodes.Root # TODO DeploymentProxy
+
+workflows:
+  check_resources_availability:
+    mapping: rsm.resource_management_plugin.tasks.check_resources_availability
+#    parameters:
+#      project_id: TODO
+#        type: string
+#

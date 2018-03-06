@@ -1,15 +1,19 @@
 import setuptools
 
 setuptools.setup(
-    name='cloudify_resources',
+    name='cloudify_resource_management',
     version='0.0.1',
-    author='Michael Shnizer',
-    author_email='michaels@cloudify.co',
+    author='Krzysztof Bijakowski',
+    author_email='krzysztof.bijakowski@cloudify.co',
     description='Resources tracking & quota validation',
-    packages=['cloudify_resources'],
+    packages=[
+        'resource_management_plugin',
+        'resource_management_sdk'
+    ],
     license='LICENSE',
     install_requires=[
         'cloudify-plugins-common>=3.4.2',
         'cloudify-rest-client>=4.0',
-        'xmltodict']
+        'xmltodict'
+    ]
 )
