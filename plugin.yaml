@@ -35,10 +35,10 @@ node_types:
           it returning items only for single tenant / project / subpart of the system
           global - it means that 'list' operation for this resource type
           it returning items from whole system
-      list_operation_inputs: #TODO
+      list_operation_inputs:
         default: {}
         required: false
-      list_operation_runtime_property_name:
+      usage_runtime_property_name:
         type: string
         required: false
     interfaces:
@@ -74,9 +74,12 @@ node_types:
           manage qouta for all resource types in one of system projects
           global - it means that this node_template is able
           to manage qouta for all resource types in system
+      quota_runtime_property_name:
+        type: string
+        required: false
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: #create of get qouta
+        create: #create or get qouta
           implementation: ~
         update: #updates qouta
           implementation: ~
