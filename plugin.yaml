@@ -2,7 +2,8 @@ plugins:
   rsm:
     executor: central_deployment_agent
     package_name: cloudify_resource_management
-    source: cloudify-rsm-plugin
+    #source: cloudify-rsm-plugin
+    source: https://github.com/Cloudify-PS/cloudify-rms-plugin/archive/master.zip
     package_version: '0.0.1'
 
 node_types:
@@ -20,12 +21,14 @@ node_types:
           to some top level category.
       resource_name:
         type: string
+        required: false
         description: >
           Name of resource which will be used as identifier
           e.g. 'security_group' or 'floating_ip'
           for 'openstack' system_name
       scope:
         type: string
+        required: true
         default: 'project'
         description: >
           project - it means that 'list' operation for this resource type
@@ -34,8 +37,10 @@ node_types:
           it returning items from whole system
       list_operation_inputs: #TODO
         default: {}
+        required: false
       list_operation_runtime_property_name:
         type: string
+        required: false
     interfaces:
       cloudify.interfaces.operations:
         list: #list instances of given resource
@@ -55,12 +60,14 @@ node_types:
           to some top level category.
       resource_name:
         type: string
+        required: false
         description: >
           Name of resource which will be used as identifier
-          e.g. 'security_group' or 'floating_ip'
-          for 'openstack' system_name
+          e.g. 'security_group' or 'floating_ip' for 'openstack' system_name
+          If empty it means that Qouta node can collect qouta for multiple resources
       scope:
         type: string
+        required: true
         default: 'project'
         description: >
           project - it means that this node_template is able to
