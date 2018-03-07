@@ -1,8 +1,10 @@
 from .constants import (
     NODE_TYPE_ROOT,
-    PROPERTY_SYSTEM_NAME,
+    PROPERTY_DEPLOYMENT_ID,
+    PROPERTY_PROJECT_NAME,
     PROPERTY_RESOURCE_NAME,
     PROPERTY_SCOPE,
+    PROPERTY_SYSTEM_NAME,
     SCOPE_PROJECT,
     SCOPE_GLOBAL
 )
@@ -11,39 +13,37 @@ from .constants import (
 class Instance(object):
 
     @classmethod
-    def _get_type(cls, instance):
-        type_hierarchy = instance.node.type_hierarchy
-
+    def _get_type(cls, type_hierarchy):
         if NODE_TYPE_ROOT in type_hierarchy:
             type_hierarchy.remove(NODE_TYPE_ROOT)
 
         if len(type_hierarchy) > 0:
             return type_hierarchy[0]
 
-    def __init__(self, instance):
-        self._id = instance.id
-
-        self._system_name = instance.node.properties.get(
-            PROPERTY_SYSTEM_NAME
-        )
-        self._resource_name = instance.node.properties.get(
-            PROPERTY_RESOURCE_NAME,
-            None
-        )
-        self._scope = instance.node.properties.get(
-            PROPERTY_SCOPE,
-            SCOPE_PROJECT
-        )
-
-        self._type = self._get_type(instance)
+    def __init__(self, id, type_hierarchy, properties, runtime_properties):
+        self._id = id
+        self._type = self._get_type(type_hierarchy)
+        self._system_name = properties.get(PROPERTY_SYSTEM_NAME)
+        self._resource_name = properties.get(PROPERTY_RESOURCE_NAME, None)
+        self._scope = properties.get(PROPERTY_SCOPE, SCOPE_PROJECT)
+        self._properties = dict(properties)
+        self._runtime_properties = dict(runtime_properties)
 
     @property
     def id(self):
         return self._id
 
     @property
+    def properties(self):
+        return self._properties
+
+    @property
     def resource_name(self):
         return self._resource_name
+
+    @property
+    def runtime_properties(self):
+        return self._runtime_properties
 
     @property
     def scope(self):
@@ -56,6 +56,52 @@ class Instance(object):
     @property
     def type(self):
         return self._type
+
+
+class WorkflowCtxInstanceAdapter(Instance):
+
+    @classmethod
+    def get_instances(cls, ctx):
+        return [cls(instance_ctx) for instance_ctx in ctx.node_instances]
+
+    def __init__(self, instance_ctx):
+        super(WorkflowCtxInstanceAdapter, self).__init__(
+            instance_ctx.id,
+            instance_ctx.node.type_hierarchy,
+            instance_ctx.node.properties,
+            instance_ctx._node_instance.runtime_properties
+            # TODO Replace above with proper method of getting runtime_properties
+            # from WorkflowNodeInstance !!!
+        )
+
+
+class RestClientInstanceAdapter(Instance):
+
+    @classmethod
+    def get_instances(cls, rest_client, deployment_id):
+        result = []
+
+        list_instances_response = rest_client.node_instances.list(
+            deployment_id=deployment_id
+        )
+
+        for instance_response in list_instances_response:
+            node_response = rest_client.nodes.get(
+                deployment_id=deployment_id,
+                node_id=instance_response.node_id
+            )
+
+            result.append(cls(instance_response, node_response))
+
+        return result
+
+    def __init__(self, instance_response, node_response):
+        super(RestClientInstanceAdapter, self).__init__(
+            instance_response.id,
+            node_response.type_hierarchy,
+            node_response.properties,
+            instance_response.runtime_properties,
+        )
 
 
 class ResourceTypeData(object):
@@ -96,18 +142,16 @@ class ResourceManagementContext(object):
 
     PROJECT_GLOBAL = SCOPE_GLOBAL
 
-    @classmethod
-    def _get_instances(cls, ctx):
-        return [Instance(instance_ctx) for instance_ctx in ctx.node_instances]
-
-    def __init__(self, ctx):
+    def __init__(self, ctx, rest_client):
         self.logger = ctx.logger
+        self.rest_client = rest_client
 
         self._collected_data = {}
-        self._instances = {
-            self.PROJECT_GLOBAL: self._get_instances(ctx)
-        }
+        self._errors = {}
 
+        self._instances = {
+            self.PROJECT_GLOBAL: WorkflowCtxInstanceAdapter.get_instances(ctx)
+        }
         self._current_project = self.PROJECT_GLOBAL
         self._next_instance()
 
@@ -120,7 +164,6 @@ class ResourceManagementContext(object):
             ]
         )
 
-    # TODO adjust to instances got both from context and rest_client
     def _next_instance(self):
         project_instances = self._instances.get(self._current_project)
 
@@ -149,12 +192,24 @@ class ResourceManagementContext(object):
         return self._collected_data
 
     @property
+    def errors(self):
+        return self._errors
+
+    @property
     def instance(self):
         return self._current_instance
 
     @property
     def project(self):
         return self._current_project
+
+    @property
+    def resource_key(self):
+        return (
+            self._current_project,
+            self._current_instance.system_name,
+            self._current_instance.resource_name
+        )
 
     def log_state(self):
         self.logger.info(
@@ -171,19 +226,48 @@ class ResourceManagementContext(object):
     def next_instance(self):
         return self._next_instance()
 
-    # TODO
     def resolve_project(self):
-        self.logger.info(
-            'TODO: Use CloudifyRestClient to get instances for deployment'
+        properties = self._current_instance.properties
+        deployment_id = properties.get(PROPERTY_DEPLOYMENT_ID, None)
+        project_name = properties.get(PROPERTY_PROJECT_NAME, None)
+
+        if not deployment_id:
+            self.logger.warn(
+                'Cannot get project instances - '
+                'property {0} is not defined for node_instance {1}'
+                .format(PROPERTY_DEPLOYMENT_ID, self._current_instance.id)
+            )
+
+            return False
+
+        if not project_name:
+            self.logger.warn(
+                'Cannot process project instances - '
+                'property {0} is not defined for node_instance {1}'
+                .format(PROPERTY_PROJECT_NAME, self._current_instance.id)
+            )
+
+            return False
+
+        instances = RestClientInstanceAdapter.get_instances(
+            self.rest_client,
+            deployment_id
         )
 
-    @property
-    def resource_key(self):
-        return (
-            self._current_project,
-            self._current_instance.system_name,
-            self._current_instance.resource_name
+        self._instances[project_name] = instances
+        self.logger.info(
+            'Project {0} (deployment_id={1}) defined by node_instance {2} '
+            'in parent deployment resolved successfully '
+            '(got {3} node_instances from child deployment)'
+            .format(
+                project_name,
+                deployment_id,
+                self._current_instance.id,
+                len(instances)
+            )
         )
+
+        return True
 
     def set_result(self, quota=None, usage=None):
         if self.resource_key in self._collected_data:

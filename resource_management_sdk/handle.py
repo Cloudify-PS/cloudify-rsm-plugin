@@ -37,6 +37,20 @@ class UsageHandler(Handler):
         super(UsageHandler, self).handle(rsm_ctx)
 
 
+class NoopHandler(Handler):
+
+    def can_handle(self, rsm_ctx):
+        return not rsm_ctx.instance.type
+
+    def handle(self, rsm_ctx):
+        super(NoopHandler, self).handle(rsm_ctx)
+        self.logger.info(
+            'Node instance {} has type with is not supported by '
+            'Resource Management Plugin. Skipping'
+            .format(rsm_ctx.instance.id)
+        )
+
+
 class ProjectHandler(Handler):
 
     def can_handle(self, rsm_ctx):
@@ -93,3 +107,5 @@ class ProjectUsageHandler(UsageHandler):
     def handle(self, rsm_ctx):
         super(ProjectUsageHandler, self).handle(rsm_ctx)
         self.logger.info('ProjectUsageHandler.handle')
+
+        rsm_ctx.set_result(usage=8)

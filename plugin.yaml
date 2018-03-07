@@ -75,8 +75,18 @@ node_types:
           implementation: ~
 
   cloudify.nodes.resource_management.Project:
-    derived_from: cloudify.nodes.Root # TODO DeploymentProxy
-
+    derived_from: cloudify.nodes.Root
+    properties:
+      project_name:
+        type: string
+        description: >
+          Name of project
+          It will be used only as label for resources usage data structure
+      deployment_id:
+        type: string
+        description: >
+          Deployment ID for deployment created from project blueprint
+          It should be already installed
 workflows:
   check_resources_availability:
     mapping: rsm.resource_management_plugin.tasks.check_resources_availability

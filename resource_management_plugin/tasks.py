@@ -17,8 +17,3 @@ def check_resources_availability(ctx, **kwargs):
     )
 
     engine.run(ctx)
-
-
-# TODO
-# 1) Getting "proxied" instances using rest api
-# 2) Normalize instances

@@ -1,6 +1,7 @@
 from context import ResourceManagementContext
 
 from handle import (
+    NoopHandler,
     ProjectHandler,
     GlobalQuotaHandler,
     ProjectQuotaHandler,
@@ -9,6 +10,7 @@ from handle import (
 )
 
 DEFAULT_HANDLER_CHAIN = (
+    NoopHandler,
     ProjectHandler,
     GlobalQuotaHandler,
     ProjectQuotaHandler,
@@ -18,10 +20,6 @@ DEFAULT_HANDLER_CHAIN = (
 
 
 class Engine(object):
-
-    @classmethod
-    def _prepare_resource_management_context(cls, ctx):
-        return ResourceManagementContext(ctx)
 
     def __init__(self, logger, rest_client, handlers):
         self.logger = logger
@@ -42,7 +40,7 @@ class Engine(object):
             self.logger.info('RESOURCE: {} -- {}'.format(k, v))
 
     def run(self, ctx):
-        rsm_ctx = self._prepare_resource_management_context(ctx)
+        rsm_ctx = ResourceManagementContext(ctx, self.rest_client)
         self._collect_data(rsm_ctx)
 
 
