@@ -8,7 +8,57 @@ from .constants import (
 )
 
 
-class ResourceTypeInfo(object):
+class Instance(object):
+
+    @classmethod
+    def _get_type(cls, instance):
+        type_hierarchy = instance.node.type_hierarchy
+
+        if NODE_TYPE_ROOT in type_hierarchy:
+            type_hierarchy.remove(NODE_TYPE_ROOT)
+
+        if len(type_hierarchy) > 0:
+            return type_hierarchy[0]
+
+    def __init__(self, instance):
+        self._id = instance.id
+
+        self._system_name = instance.node.properties.get(
+            PROPERTY_SYSTEM_NAME
+        )
+        self._resource_name = instance.node.properties.get(
+            PROPERTY_RESOURCE_NAME,
+            None
+        )
+        self._scope = instance.node.properties.get(
+            PROPERTY_SCOPE,
+            SCOPE_PROJECT
+        )
+
+        self._type = self._get_type(instance)
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def resource_name(self):
+        return self._resource_name
+
+    @property
+    def scope(self):
+        return self._scope
+
+    @property
+    def system_name(self):
+        return self._system_name
+
+    @property
+    def type(self):
+        return self._type
+
+
+class ResourceTypeData(object):
 
     def _set_values(self, quota=None, usage=None):
         self.quota = float(quota) if quota else None
@@ -48,17 +98,7 @@ class ResourceManagementContext(object):
 
     @classmethod
     def _get_instances(cls, ctx):
-        return list(ctx.node_instances)
-
-    @classmethod
-    def _get_resource_management_type(cls, instance):
-        type_hierarchy = instance.node.type_hierarchy
-
-        if NODE_TYPE_ROOT in type_hierarchy:
-            type_hierarchy.remove(NODE_TYPE_ROOT)
-
-        if len(type_hierarchy) > 0:
-            return type_hierarchy[0]
+        return [Instance(instance_ctx) for instance_ctx in ctx.node_instances]
 
     def __init__(self, ctx):
         self.logger = ctx.logger
@@ -85,24 +125,8 @@ class ResourceManagementContext(object):
         project_instances = self._instances.get(self._current_project)
 
         if len(project_instances) > 0:
-            self._instance = project_instances.pop()
+            self._current_instance = project_instances.pop()
             self._instances[self._current_project] = project_instances
-
-            # TODO START move to separate Instance class
-            self._system_name = self._instance.node.properties.get(
-                PROPERTY_SYSTEM_NAME
-            )
-            self._resource_name = self._instance.node.properties.get(
-                PROPERTY_RESOURCE_NAME,
-                None
-            )
-            self._scope = self._instance.node.properties.get(
-                PROPERTY_SCOPE,
-                SCOPE_PROJECT
-            )
-
-            self._type = self._get_resource_management_type(self._instance)
-            # TODO END move to separate Instance class
 
             self.log_state()
             return True
@@ -121,32 +145,16 @@ class ResourceManagementContext(object):
         return self._next_instance()
 
     @property
-    def current_project(self):
-        return self._current_project
-
-    @property
     def collected_data(self):
         return self._collected_data
 
-    # TODO (re)move
     @property
-    def system_name(self):
-        return self._system_name
+    def instance(self):
+        return self._current_instance
 
-    # TODO (re)move
     @property
-    def resource_name(self):
-        return self._resource_name
-
-    # TODO (re)move
-    @property
-    def scope(self):
-        return self._scope
-
-    # TODO (re)move
-    @property
-    def type(self):
-        return self._type
+    def project(self):
+        return self._current_project
 
     def log_state(self):
         self.logger.info(
@@ -156,7 +164,7 @@ class ResourceManagementContext(object):
                 self.__class__.__name__,
                 self._current_project,
                 self._format_instances(),
-                self._instance.id
+                self._current_instance.id
             )
         )
 
@@ -169,13 +177,22 @@ class ResourceManagementContext(object):
             'TODO: Use CloudifyRestClient to get instances for deployment'
         )
 
-    def set_result(self, quota=None, usage=None):
-        key = (self._current_project, self._system_name, self._resource_name)
+    @property
+    def resource_key(self):
+        return (
+            self._current_project,
+            self._current_instance.system_name,
+            self._current_instance.resource_name
+        )
 
-        if key in self._collected_data:
-            self._collected_data[key].update(quota=quota, usage=usage)
+    def set_result(self, quota=None, usage=None):
+        if self.resource_key in self._collected_data:
+            self._collected_data[self.resource_key].update(
+                quota=quota,
+                usage=usage
+            )
         else:
-            self._collected_data[key] = ResourceTypeInfo(
+            self._collected_data[self.resource_key] = ResourceTypeData(
                 quota=quota,
                 usage=usage
             )

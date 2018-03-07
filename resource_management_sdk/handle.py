@@ -40,7 +40,7 @@ class UsageHandler(Handler):
 class ProjectHandler(Handler):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.type == NODE_TYPE_PROJECT
+        return rsm_ctx.instance.type == NODE_TYPE_PROJECT
 
     def handle(self, rsm_ctx):
         super(ProjectHandler, self).handle(rsm_ctx)
@@ -52,8 +52,8 @@ class ProjectHandler(Handler):
 class GlobalQuotaHandler(QuotaHandler):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.type == NODE_TYPE_PROJECT and \
-               rsm_ctx.scope == SCOPE_GLOBAL
+        return rsm_ctx.instance.type == NODE_TYPE_PROJECT and \
+               rsm_ctx.instance.scope == SCOPE_GLOBAL
 
     def handle(self, rsm_ctx):
         super(GlobalQuotaHandler, self).handle(rsm_ctx)
@@ -63,8 +63,8 @@ class GlobalQuotaHandler(QuotaHandler):
 class ProjectQuotaHandler(QuotaHandler):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.type == NODE_TYPE_QUOTA and \
-               rsm_ctx.scope == SCOPE_PROJECT
+        return rsm_ctx.instance.type == NODE_TYPE_QUOTA and \
+               rsm_ctx.instance.scope == SCOPE_PROJECT
 
     def handle(self, rsm_ctx):
         super(ProjectQuotaHandler, self).handle(rsm_ctx)
@@ -74,8 +74,8 @@ class ProjectQuotaHandler(QuotaHandler):
 class GlobalUsageHandler(UsageHandler):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.type == NODE_TYPE_USAGE and \
-               rsm_ctx.scope == SCOPE_GLOBAL
+        return rsm_ctx.instance.type == NODE_TYPE_USAGE and \
+               rsm_ctx.instance.scope == SCOPE_GLOBAL
 
     def handle(self, rsm_ctx):
         super(GlobalUsageHandler, self).handle(rsm_ctx)
@@ -87,8 +87,8 @@ class GlobalUsageHandler(UsageHandler):
 class ProjectUsageHandler(UsageHandler):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.type == NODE_TYPE_USAGE and \
-               rsm_ctx.scope == SCOPE_PROJECT
+        return rsm_ctx.instance.type == NODE_TYPE_USAGE and \
+               rsm_ctx.instance.scope == SCOPE_PROJECT
 
     def handle(self, rsm_ctx):
         super(ProjectUsageHandler, self).handle(rsm_ctx)
