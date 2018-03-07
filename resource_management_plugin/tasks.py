@@ -20,6 +20,5 @@ def check_resources_availability(ctx, **kwargs):
 
 
 # TODO
-# 1) Projects processing
-# 2) Getting "proxied" instances using rest api
-# 3) Normalize instances
+# 1) Getting "proxied" instances using rest api
+# 2) Normalize instances

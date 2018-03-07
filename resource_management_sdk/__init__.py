@@ -1,4 +1,4 @@
-from context import DeploymentResourceManagementContext
+from context import ResourceManagementContext
 
 from handle import (
     ProjectHandler,
@@ -21,14 +21,14 @@ class Engine(object):
 
     @classmethod
     def _prepare_resource_management_context(cls, ctx):
-        return DeploymentResourceManagementContext(ctx)
+        return ResourceManagementContext(ctx)
 
     def __init__(self, logger, rest_client, handlers):
         self.logger = logger
         self.rest_client = rest_client
         self.handlers = [handler_cls(logger) for handler_cls in handlers]
 
-    def _gather_data(self, rsm_ctx):
+    def _collect_data(self, rsm_ctx):
         while True:
             for handler in self.handlers:
                 if handler.can_handle(rsm_ctx):
@@ -38,14 +38,12 @@ class Engine(object):
             if not rsm_ctx.next_instance():
                 break
 
-        self.logger.info('Projects: {}'.format(rsm_ctx.projects))
-
-        for k, v in rsm_ctx.values.iteritems():
+        for k, v in rsm_ctx.collected_data.iteritems():
             self.logger.info('RESOURCE: {} -- {}'.format(k, v))
 
     def run(self, ctx):
         rsm_ctx = self._prepare_resource_management_context(ctx)
-        self._gather_data(rsm_ctx)
+        self._collect_data(rsm_ctx)
 
 
 def get_handlers():

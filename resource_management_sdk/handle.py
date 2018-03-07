@@ -46,7 +46,7 @@ class ProjectHandler(Handler):
         super(ProjectHandler, self).handle(rsm_ctx)
         self.logger.info('ProjectHandler.handle')
 
-        rsm_ctx.mark_as_project()
+        rsm_ctx.resolve_project()
 
 
 class GlobalQuotaHandler(QuotaHandler):
