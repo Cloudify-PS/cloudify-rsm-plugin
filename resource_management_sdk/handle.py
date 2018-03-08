@@ -19,31 +19,12 @@ class Handler(object):
         pass
 
 
-class QuotaHandler(Handler):
-
-    def can_handle(self, rsm_ctx):
-        return False
-
-    def handle(self, rsm_ctx):
-        super(QuotaHandler, self).handle(rsm_ctx)
-
-
-class UsageHandler(Handler):
-
-    def can_handle(self, rsm_ctx):
-        return False
-
-    def handle(self, rsm_ctx):
-        super(UsageHandler, self).handle(rsm_ctx)
-
-
 class NoopHandler(Handler):
 
     def can_handle(self, rsm_ctx):
         return not rsm_ctx.instance.type
 
     def handle(self, rsm_ctx):
-        super(NoopHandler, self).handle(rsm_ctx)
         self.logger.info(
             'Node instance {} has type with is not supported by '
             'Resource Management Plugin. Skipping'
@@ -57,55 +38,96 @@ class ProjectHandler(Handler):
         return rsm_ctx.instance.type == NODE_TYPE_PROJECT
 
     def handle(self, rsm_ctx):
-        super(ProjectHandler, self).handle(rsm_ctx)
         self.logger.info('ProjectHandler.handle')
 
         rsm_ctx.resolve_project()
 
 
-class GlobalQuotaHandler(QuotaHandler):
+class _RuntimePropertyHandlerBase(Handler):
+
+    @staticmethod
+    def _get_resource_name(rsm_ctx):
+        return rsm_ctx.instance.resource_name
+
+    @staticmethod
+    def _get_runtime_property_name(rsm_ctx):
+        return rsm_ctx.instance.runtime_property_name
+
+    @staticmethod
+    def _get_runtime_property_value(rsm_ctx):
+        return rsm_ctx.instance.runtime_property_value
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.instance.type == NODE_TYPE_PROJECT and \
-               rsm_ctx.instance.scope == SCOPE_GLOBAL
-
-    def handle(self, rsm_ctx):
-        super(GlobalQuotaHandler, self).handle(rsm_ctx)
-        self.logger.info('GlobalQuotaHandler.handle')
+        return self._get_runtime_property_name(rsm_ctx) \
+               and rsm_ctx.instance.type == NODE_TYPE_QUOTA  # TODO remove ?
 
 
-class ProjectQuotaHandler(QuotaHandler):
+class SingleNumberHandler(_RuntimePropertyHandlerBase):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.instance.type == NODE_TYPE_QUOTA and \
-               rsm_ctx.instance.scope == SCOPE_PROJECT
+        result = super(SingleNumberHandler, self).can_handle(rsm_ctx) and \
+                 self._get_resource_name(rsm_ctx)
+
+        try:
+            float(self._get_runtime_property_value(rsm_ctx))
+        except (TypeError, ValueError):
+            result = False
+
+        return result
 
     def handle(self, rsm_ctx):
-        super(ProjectQuotaHandler, self).handle(rsm_ctx)
-        self.logger.info('ProjectQuotaHandler.handle')
+        resource_name = self._get_resource_name(rsm_ctx)
+        value = self._get_runtime_property_value(rsm_ctx)
+
+        self.logger.info(
+            'SingleNumberHandler - setting value {0} for {1}'
+            .format(value, resource_name)
+        )
+
+        rsm_ctx.set_result(quota=value, resource_name=resource_name)
 
 
-class GlobalUsageHandler(UsageHandler):
+class SingleDictHandler(_RuntimePropertyHandlerBase):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.instance.type == NODE_TYPE_USAGE and \
-               rsm_ctx.instance.scope == SCOPE_GLOBAL
+        return super(SingleDictHandler, self).can_handle(rsm_ctx) \
+            and self._get_resource_name(rsm_ctx) \
+            and isinstance(self._get_runtime_property_value(rsm_ctx), dict)
 
     def handle(self, rsm_ctx):
-        super(GlobalUsageHandler, self).handle(rsm_ctx)
-        self.logger.info('GlobalUsageHandler.handle')
+        resource_name = self._get_resource_name(rsm_ctx)
+        value = self._get_runtime_property_value(rsm_ctx) \
+            .get(resource_name, None)
 
-        rsm_ctx.set_result(usage=15)
+        if value:
+            self.logger.info(
+                'SingleDictHandler - setting value {0} for {1}'
+                .format(value, resource_name)
+            )
+
+            rsm_ctx.set_result(quota=value, resource_name=resource_name)
+        else:
+            self.logger.warn(
+                'SingleDictHandler - resource_name has been defined to {} '
+                'but not found in dict runtime property'
+                .format(resource_name)
+            )
 
 
-class ProjectUsageHandler(UsageHandler):
+class MultipleDictHandler(_RuntimePropertyHandlerBase):
 
     def can_handle(self, rsm_ctx):
-        return rsm_ctx.instance.type == NODE_TYPE_USAGE and \
-               rsm_ctx.instance.scope == SCOPE_PROJECT
+        return super(MultipleDictHandler, self).can_handle(rsm_ctx) \
+           and not self._get_resource_name(rsm_ctx) \
+           and isinstance(self._get_runtime_property_value(rsm_ctx), dict)
 
     def handle(self, rsm_ctx):
-        super(ProjectUsageHandler, self).handle(rsm_ctx)
-        self.logger.info('ProjectUsageHandler.handle')
+        runtime_property = self._get_runtime_property_value(rsm_ctx)
 
-        rsm_ctx.set_result(usage=8)
+        for resource_name, value in runtime_property.iteritems():
+            self.logger.info(
+                'MultipleDictHandler - setting value {0} for {1}'
+                .format(value, resource_name)
+            )
+
+            rsm_ctx.set_result(quota=value, resource_name=resource_name)

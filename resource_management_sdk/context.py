@@ -3,6 +3,7 @@ from .constants import (
     PROPERTY_DEPLOYMENT_ID,
     PROPERTY_PROJECT_NAME,
     PROPERTY_RESOURCE_NAME,
+    PROPERTY_RUNTIME_PROPERTY_NAME,
     PROPERTY_SCOPE,
     PROPERTY_SYSTEM_NAME,
     SCOPE_PROJECT,
@@ -26,6 +27,10 @@ class Instance(object):
         self._system_name = properties.get(PROPERTY_SYSTEM_NAME)
         self._resource_name = properties.get(PROPERTY_RESOURCE_NAME, None)
         self._scope = properties.get(PROPERTY_SCOPE, SCOPE_PROJECT)
+        self._runtime_property_name = properties.get(
+            PROPERTY_RUNTIME_PROPERTY_NAME,
+            None
+        )
         self._properties = dict(properties)
         self._runtime_properties = dict(runtime_properties)
 
@@ -44,6 +49,17 @@ class Instance(object):
     @property
     def runtime_properties(self):
         return self._runtime_properties
+
+    @property
+    def runtime_property_name(self):
+        return self._runtime_property_name
+
+    @property
+    def runtime_property_value(self):
+        return self._runtime_properties.get(
+            self._runtime_property_name,
+            None
+        )
 
     @property
     def scope(self):
@@ -203,12 +219,11 @@ class ResourceManagementContext(object):
     def project(self):
         return self._current_project
 
-    @property
-    def resource_key(self):
+    def get_resource_key(self, resource_name=None):
         return (
             self._current_project,
             self._current_instance.system_name,
-            self._current_instance.resource_name
+            resource_name or self._current_instance.resource_name
         )
 
     def log_state(self):
@@ -269,14 +284,16 @@ class ResourceManagementContext(object):
 
         return True
 
-    def set_result(self, quota=None, usage=None):
-        if self.resource_key in self._collected_data:
-            self._collected_data[self.resource_key].update(
+    def set_result(self, quota=None, usage=None, resource_name=None):
+        resource_key = self.get_resource_key(resource_name)
+
+        if resource_key in self._collected_data:
+            self._collected_data[resource_key].update(
                 quota=quota,
                 usage=usage
             )
         else:
-            self._collected_data[self.resource_key] = ResourceTypeData(
+            self._collected_data[resource_key] = ResourceTypeData(
                 quota=quota,
                 usage=usage
             )

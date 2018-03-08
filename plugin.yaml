@@ -2,7 +2,6 @@ plugins:
   rsm:
     executor: central_deployment_agent
     package_name: cloudify_resource_management
-    #source: cloudify-rsm-plugin
     source: https://github.com/Cloudify-PS/cloudify-rms-plugin/archive/master.zip
     package_version: '0.0.1'
 
@@ -34,9 +33,9 @@ node_types:
           it returning items only for single tenant / project / subpart of the system
           global - it means that 'list' operation for this resource type
           it returning items from whole system
-      list_operation_inputs:
+      operation_inputs:
         default: {}
-      usage_runtime_property_name:
+      runtime_property_name:
         type: string
         default: 'usage'
     interfaces:
@@ -72,7 +71,7 @@ node_types:
           manage qouta for all resource types in one of system projects
           global - it means that this node_template is able
           to manage qouta for all resource types in system
-      quota_runtime_property_name:
+      runtime_property_name:
         type: string
         default: 'quota'
     interfaces:
@@ -95,6 +94,7 @@ node_types:
         description: >
           Deployment ID for deployment created from project blueprint
           It should be already installed
+
 workflows:
   check_resources_availability:
     mapping: rsm.resource_management_plugin.tasks.check_resources_availability
