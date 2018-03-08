@@ -28,7 +28,6 @@ node_types:
           for 'openstack' system_name
       scope:
         type: string
-        required: true
         default: 'project'
         description: >
           project - it means that 'list' operation for this resource type
@@ -37,10 +36,9 @@ node_types:
           it returning items from whole system
       list_operation_inputs:
         default: {}
-        required: false
       usage_runtime_property_name:
         type: string
-        required: false
+        default: 'usage'
     interfaces:
       cloudify.interfaces.operations:
         list: #list instances of given resource
@@ -76,7 +74,7 @@ node_types:
           to manage qouta for all resource types in system
       quota_runtime_property_name:
         type: string
-        required: false
+        default: 'quota'
     interfaces:
       cloudify.interfaces.lifecycle:
         create: #create or get qouta
