@@ -13,3 +13,5 @@ PROPERTY_SYSTEM_NAME = 'system_name'
 
 SCOPE_GLOBAL = 'global'
 SCOPE_PROJECT = 'project'
+
+SYSTEM_NAME_OPENSTACK = 'openstack'

@@ -146,8 +146,15 @@ class ResourceTypeData(object):
         self.calculate_availability()
 
     def calculate_availability(self):
-        if self.quota and self.usage:
+        if self.quota and self.usage and self.quota >= 0.0:
             self.available = self.quota - self.usage
+
+        if self.available and self.available < 0.0:
+            raise RuntimeError(
+                'Resource availability cannot be lower than 0 !! '
+                '(calculated {})'
+                .format(self.available)
+            )
 
     def __repr__(self):
         return '(Q: {0}, U: {1}, A: {2})'.format(
@@ -229,7 +236,7 @@ class ResourceManagementContext(object):
             resource_name or self._current_instance.resource_name
         )
 
-    def log_message(self, level, message, *args):
+    def log(self, level, message, *args):
         method = getattr(self.logger, level, None)
 
         if method:

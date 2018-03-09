@@ -12,10 +12,10 @@ from handle import (
 DEFAULT_HANDLER_CHAIN = (
     NoopHandler,
     ProjectHandler,
-    SimpleQuotaHandler,
-    SimpleUsageHandler,
     OpenstackQuotaHandler,
-    OpenstackUsageHandler
+    OpenstackUsageHandler,
+    SimpleQuotaHandler,
+    SimpleUsageHandler
 )
 
 
