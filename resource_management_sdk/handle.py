@@ -55,6 +55,10 @@ class _RuntimePropertyHandlerBase(Handler):
             return False
 
     @staticmethod
+    def _is_iterable(value):
+        return isinstance(value, list) or isinstance(value, tuple)
+
+    @staticmethod
     def _is_dict(value):
         return isinstance(value, dict)
 
@@ -115,7 +119,7 @@ class _RuntimePropertyHandlerBase(Handler):
             None
         )
 
-        if not runtime_property_value:
+        if runtime_property_value is None:
             rsm_ctx.log(
                 'warn',
                 'Runtime property "{0}" not found in runtime properties: {1}',
@@ -136,6 +140,16 @@ class _RuntimePropertyHandlerBase(Handler):
 
             return
 
+        elif self._is_iterable(runtime_property_value):
+            self._process_number_value(
+                rsm_ctx,
+                value_type,
+                runtime_property_name,
+                len(runtime_property_value),
+                resource_name
+            )
+
+            return
         elif self._is_dict(runtime_property_value):
             nested_value = runtime_property_value.get(
                 resource_name,
@@ -188,19 +202,11 @@ class SimpleUsageHandler(_RuntimePropertyHandlerBase):
         return rsm_ctx.instance.type == NODE_TYPE_USAGE
 
     def handle(self, rsm_ctx):
-        rsm_ctx.log('info', '[TEST] USAGE HANDLER')
-        rsm_ctx.set_value(usage=2)
-
-    class RuntimePropertyQuotaHandler(_RuntimePropertyHandlerBase):
-        def can_handle(self, rsm_ctx):
-            return rsm_ctx.instance.type == NODE_TYPE_QUOTA
-
-        def handle(self, rsm_ctx):
-            self._process_runtime_properties(
-                rsm_ctx,
-                rsm_ctx.instance.runtime_properties,
-                self.VALUE_TYPE_QUOTA
-            )
+        self._process_runtime_properties(
+            rsm_ctx,
+            rsm_ctx.instance.runtime_properties,
+            self.VALUE_TYPE_USAGE
+        )
 
 
 class OpenstackQuotaHandler(SimpleQuotaHandler):
@@ -258,14 +264,3 @@ class OpenstackQuotaHandler(SimpleQuotaHandler):
     def can_handle(self, rsm_ctx):
         return super(OpenstackQuotaHandler, self).can_handle(rsm_ctx) and \
                SYSTEM_NAME_OPENSTACK in rsm_ctx.instance.system_name
-
-
-class OpenstackUsageHandler(_RuntimePropertyHandlerBase):
-
-    def can_handle(self, rsm_ctx):
-        return rsm_ctx.instance.type == NODE_TYPE_USAGE and \
-               SYSTEM_NAME_OPENSTACK in rsm_ctx.instance.system_name
-
-    def handle(self, rsm_ctx):
-        rsm_ctx.log('info', '[TEST] OPENSTACK USAGE HANDLER')
-        rsm_ctx.set_value(usage=1)

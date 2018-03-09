@@ -5,15 +5,13 @@ from handle import (
     ProjectHandler,
     SimpleQuotaHandler,
     SimpleUsageHandler,
-    OpenstackQuotaHandler,
-    OpenstackUsageHandler
+    OpenstackQuotaHandler
 )
 
 DEFAULT_HANDLER_CHAIN = (
     NoopHandler,
     ProjectHandler,
     OpenstackQuotaHandler,
-    OpenstackUsageHandler,
     SimpleQuotaHandler,
     SimpleUsageHandler
 )

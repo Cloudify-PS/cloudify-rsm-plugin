@@ -123,10 +123,10 @@ class RestClientInstanceAdapter(Instance):
 class ResourceTypeData(object):
 
     def _set_values(self, quota=None, usage=None):
-        if quota:
+        if quota is not None:
             self.quota = float(quota)
 
-        if usage:
+        if usage is not None:
             if isinstance(usage, list):
                 self.usage = float(len(usage))
             else:
@@ -146,8 +146,9 @@ class ResourceTypeData(object):
         self.calculate_availability()
 
     def calculate_availability(self):
-        if self.quota and self.usage and self.quota >= 0.0:
-            self.available = self.quota - self.usage
+        if self.quota is not None and self.usage is not None:
+            if self.quota >= 0.0:
+                self.available = self.quota - self.usage
 
         if self.available and self.available < 0.0:
             raise RuntimeError(
