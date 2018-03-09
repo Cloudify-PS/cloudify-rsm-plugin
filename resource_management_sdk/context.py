@@ -123,20 +123,23 @@ class RestClientInstanceAdapter(Instance):
 class ResourceTypeData(object):
 
     def _set_values(self, quota=None, usage=None):
-        self.quota = float(quota) if quota else None
-        self.usage = None
+        if quota:
+            self.quota = float(quota)
 
         if usage:
             if isinstance(usage, list):
-                self.usage = len(usage)
+                self.usage = float(len(usage))
             else:
                 self.usage = float(usage)
 
         self.calculate_availability()
 
     def __init__(self, quota=None, usage=None):
-        self._set_values(quota=quota, usage=usage)
+        self.usage = None
+        self.quota = None
         self.available = None
+
+        self._set_values(quota=quota, usage=usage)
 
     def update(self, quota=None, usage=None):
         self._set_values(quota=quota, usage=usage)
@@ -226,10 +229,17 @@ class ResourceManagementContext(object):
             resource_name or self._current_instance.resource_name
         )
 
+    def log_message(self, level, message, *args):
+        method = getattr(self.logger, level, None)
+
+        if method:
+            message = str(message).format(*args)
+            method('[{0}] {1}'.format(self.instance.id, message))
+
     def log_state(self):
         self.logger.info(
-            'Current {0} state: \ncurrent_project: {1} \n'
-            'instances: {2} \ninstance: {3}'
+            '\n=====\nCurrent {0} state: \ncurrent_project: {1} \n'
+            'instances: {2} \ninstance: {3}\n====='
             .format(
                 self.__class__.__name__,
                 self._current_project,
@@ -284,7 +294,7 @@ class ResourceManagementContext(object):
 
         return True
 
-    def set_result(self, quota=None, usage=None, resource_name=None):
+    def set_value(self, quota=None, usage=None, resource_name=None):
         resource_key = self.get_resource_key(resource_name)
 
         if resource_key in self._collected_data:

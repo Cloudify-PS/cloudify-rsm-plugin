@@ -3,17 +3,19 @@ from context import ResourceManagementContext
 from handle import (
     NoopHandler,
     ProjectHandler,
-    SingleDictHandler,
-    SingleNumberHandler,
-    MultipleDictHandler
+    SimpleQuotaHandler,
+    SimpleUsageHandler,
+    OpenstackQuotaHandler,
+    OpenstackUsageHandler
 )
 
 DEFAULT_HANDLER_CHAIN = (
     NoopHandler,
     ProjectHandler,
-    SingleDictHandler,
-    SingleNumberHandler,
-    MultipleDictHandler
+    SimpleQuotaHandler,
+    SimpleUsageHandler,
+    OpenstackQuotaHandler,
+    OpenstackUsageHandler
 )
 
 

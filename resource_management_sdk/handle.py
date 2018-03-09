@@ -1,9 +1,7 @@
 from .constants import (
     NODE_TYPE_PROJECT,
     NODE_TYPE_QUOTA,
-    NODE_TYPE_USAGE,
-    SCOPE_GLOBAL,
-    SCOPE_PROJECT
+    NODE_TYPE_USAGE
 )
 
 
@@ -25,10 +23,10 @@ class NoopHandler(Handler):
         return not rsm_ctx.instance.type
 
     def handle(self, rsm_ctx):
-        self.logger.info(
-            'Node instance {} has type with is not supported by '
+        rsm_ctx.log_message(
+            'info',
+            'Node instance has type with is not supported by '
             'Resource Management Plugin. Skipping'
-            .format(rsm_ctx.instance.id)
         )
 
 
@@ -38,96 +36,151 @@ class ProjectHandler(Handler):
         return rsm_ctx.instance.type == NODE_TYPE_PROJECT
 
     def handle(self, rsm_ctx):
-        self.logger.info('ProjectHandler.handle')
-
+        rsm_ctx.log_message('info', 'Processing of project started')
         rsm_ctx.resolve_project()
 
 
 class _RuntimePropertyHandlerBase(Handler):
 
-    @staticmethod
-    def _get_resource_name(rsm_ctx):
-        return rsm_ctx.instance.resource_name
+    VALUE_TYPE_QUOTA = 'quota'
+    VALUE_TYPE_USAGE = 'usage'
 
-    @staticmethod
-    def _get_runtime_property_name(rsm_ctx):
-        return rsm_ctx.instance.runtime_property_name
+    def _set_value(self, rsm_ctx, value, value_type, resource_name=None):
+        value_dict = {value_type: value}
 
-    @staticmethod
-    def _get_runtime_property_value(rsm_ctx):
-        return rsm_ctx.instance.runtime_property_value
+        if resource_name:
+            value_dict['resource_name'] = resource_name
 
-    def can_handle(self, rsm_ctx):
-        return self._get_runtime_property_name(rsm_ctx) \
-               and rsm_ctx.instance.type == NODE_TYPE_QUOTA  # TODO remove ?
+        rsm_ctx.log_message('debug', 'Setting {}', value_dict)
+        rsm_ctx.set_value(**value_dict)
 
+    def _process_runtime_properties(self,
+                                    rsm_ctx,
+                                    runtime_properties,
+                                    value_type):
 
-class SingleNumberHandler(_RuntimePropertyHandlerBase):
+        def _is_number(value):
+            try:
+                float(value)
+                return True
+            except (TypeError, ValueError):
+                return False
 
-    def can_handle(self, rsm_ctx):
-        result = super(SingleNumberHandler, self).can_handle(rsm_ctx) and \
-                 self._get_resource_name(rsm_ctx)
+        def _is_dict(value):
+            return isinstance(value, dict)
 
-        try:
-            float(self._get_runtime_property_value(rsm_ctx))
-        except (TypeError, ValueError):
-            result = False
-
-        return result
-
-    def handle(self, rsm_ctx):
-        resource_name = self._get_resource_name(rsm_ctx)
-        value = self._get_runtime_property_value(rsm_ctx)
-
-        self.logger.info(
-            'SingleNumberHandler - setting value {0} for {1}'
-            .format(value, resource_name)
+        resource_name = rsm_ctx.instance.resource_name
+        runtime_property_name = rsm_ctx.instance.runtime_property_name
+        runtime_property_value = runtime_properties.get(
+            runtime_property_name,
+            None
         )
 
-        rsm_ctx.set_result(quota=value, resource_name=resource_name)
+        if not runtime_property_value:
+            rsm_ctx.log_message(
+                'warn',
+                'Runtime property "{0}" not found in runtime properties: {1}',
+                runtime_property_name,
+                runtime_properties
+            )
+
+            return
+
+        if _is_number(runtime_property_value) and resource_name:
+            rsm_ctx.log_message(
+                'debug',
+                'Found {0} numerical value defined in "{1}" '
+                'runtime property (for resource: {2})',
+                value_type,
+                runtime_property_name,
+                resource_name
+            )
+
+            self._set_value(rsm_ctx, runtime_property_value, value_type)
+
+            return
+
+        elif _is_dict(runtime_property_value):
+            nested_value = runtime_property_value.get(
+                resource_name,
+                None
+            )
+
+            if _is_number(nested_value):
+                rsm_ctx.log_message(
+                    'debug',
+                    'Found {0} dict value defined in "{1}" '
+                    'runtime property (for resource: {2})',
+                    value_type,
+                    runtime_property_name,
+                    resource_name
+                )
+
+                self._set_value(rsm_ctx, nested_value, value_type)
+            else:
+                rsm_ctx.log_message(
+                    'debug',
+                    'Found {0} dict value defined in "{1}" runtime property '
+                    '- but resource name has been not specified. '
+                    'Trying to set values based of dict value keys',
+                    value_type,
+                    runtime_property_name,
+                    resource_name
+                )
+
+                for key, value in runtime_property_value.iteritems():
+                    if isinstance(key, str) and _is_number(value):
+                        self._set_value(rsm_ctx, value, value_type, key)
+
+            return
+
+        rsm_ctx.log_message(
+            'debug'
+            'Not supported {1} type "{0}" of runtime property "{2}"',
+            type(runtime_property_value),
+            value_type,
+            runtime_property_name
+        )
 
 
-class SingleDictHandler(_RuntimePropertyHandlerBase):
+class SimpleQuotaHandler(_RuntimePropertyHandlerBase):
 
     def can_handle(self, rsm_ctx):
-        return super(SingleDictHandler, self).can_handle(rsm_ctx) \
-            and self._get_resource_name(rsm_ctx) \
-            and isinstance(self._get_runtime_property_value(rsm_ctx), dict)
+        return rsm_ctx.instance.type == NODE_TYPE_QUOTA
 
     def handle(self, rsm_ctx):
-        resource_name = self._get_resource_name(rsm_ctx)
-        value = self._get_runtime_property_value(rsm_ctx) \
-            .get(resource_name, None)
-
-        if value:
-            self.logger.info(
-                'SingleDictHandler - setting value {0} for {1}'
-                .format(value, resource_name)
-            )
-
-            rsm_ctx.set_result(quota=value, resource_name=resource_name)
-        else:
-            self.logger.warn(
-                'SingleDictHandler - resource_name has been defined to {} '
-                'but not found in dict runtime property'
-                .format(resource_name)
-            )
+        self._process_runtime_properties(
+            rsm_ctx,
+            rsm_ctx.instance.runtime_properties,
+            self.VALUE_TYPE_QUOTA
+        )
 
 
-class MultipleDictHandler(_RuntimePropertyHandlerBase):
+class SimpleUsageHandler(_RuntimePropertyHandlerBase):
 
+    # TODO
     def can_handle(self, rsm_ctx):
-        return super(MultipleDictHandler, self).can_handle(rsm_ctx) \
-           and not self._get_resource_name(rsm_ctx) \
-           and isinstance(self._get_runtime_property_value(rsm_ctx), dict)
+        return rsm_ctx.instance.type == NODE_TYPE_USAGE
 
     def handle(self, rsm_ctx):
-        runtime_property = self._get_runtime_property_value(rsm_ctx)
+        rsm_ctx.log_message('info', '[TEST] USAGE HANDLER')
+        rsm_ctx.set_value(usage=1)
 
-        for resource_name, value in runtime_property.iteritems():
-            self.logger.info(
-                'MultipleDictHandler - setting value {0} for {1}'
-                .format(value, resource_name)
+    class RuntimePropertyQuotaHandler(_RuntimePropertyHandlerBase):
+        def can_handle(self, rsm_ctx):
+            return rsm_ctx.instance.type == NODE_TYPE_QUOTA
+
+        def handle(self, rsm_ctx):
+            self._process_runtime_properties(
+                rsm_ctx,
+                rsm_ctx.instance.runtime_properties,
+                self.VALUE_TYPE_QUOTA
             )
 
-            rsm_ctx.set_result(quota=value, resource_name=resource_name)
+
+class OpenstackQuotaHandler(_RuntimePropertyHandlerBase):
+    pass
+
+
+class OpenstackUsageHandler(_RuntimePropertyHandlerBase):
+    pass
