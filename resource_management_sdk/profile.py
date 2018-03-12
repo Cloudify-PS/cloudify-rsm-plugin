@@ -1,8 +1,6 @@
-from .constants import (
-    SCOPE_GLOBAL,
-    SCOPE_PROJECT,
-    SCOPES
-)
+import json
+
+from .constants import SCOPES
 from .data import ResourceKey
 
 
@@ -15,25 +13,13 @@ class ProfileValidationError(object):
                  requirement,
                  availability=None):
 
-        self._resource_key = resource_key
-        self._requirement = requirement
-        self._availability = availability
-
-    @property
-    def availability(self):
-        return self._availability
+        self.resource_key = resource_key
+        self.requirement = requirement
+        self.availability = availability
 
     @property
     def message(self):
         return self.MESSAGE_TEMPLATE
-
-    @property
-    def resource_key(self):
-        return self._resource_key
-
-    @property
-    def requirement(self):
-        return self._requirement
 
 
 class NoAvailableResourcesError(ProfileValidationError):
@@ -45,11 +31,11 @@ class NoAvailableResourcesError(ProfileValidationError):
     @property
     def message(self):
         return self.MESSAGE_TEMPLATE.format(
-            self._resource_key.system_name,
-            self._resource_key.resource_name,
-            self._resource_key.project_id,
-            self._requirement,
-            self._availability
+            self.resource_key.system_name,
+            self.resource_key.resource_name,
+            self.resource_key.project_id,
+            self.requirement,
+            self.availability
         )
 
 
@@ -62,29 +48,62 @@ class CannotDetermineAvailabilityError(ProfileValidationError):
     @property
     def message(self):
         return self.MESSAGE_TEMPLATE.format(
-            self._resource_key.resource_name,
-            self._requirement,
-            self._resource_key.system_name,
-            self._resource_key.project_id
+            self.resource_key.resource_name,
+            self.requirement,
+            self.resource_key.system_name,
+            self.resource_key.project_id
         )
 
 
 class ResourcesProfile(object):
 
-    @staticmethod
-    def get_profile_from_dict(logger, profile_dict):
-        pass
+    @classmethod
+    def get_profile_from_dict(cls, logger, profile_dict):
 
-    @staticmethod
-    def get_profile_from_string(logger, profile_str):
-        # TODO
+        def is_str(value):
+            if not isinstance(value, basestring):
+                raise RuntimeError(
+                    'Wrong key: {} in profile definition. '
+                    'Keys may be only string type.'
+                    .format(value)
+                )
+
+        def is_dict(value):
+            if not isinstance(value, dict):
+                raise RuntimeError(
+                    'Cannot process profile definition (part) '
+                    'defined in unknown type: {}. '
+                    'Only dict (parsed JSON) is supported.'
+                    .format(type(value))
+                )
+
+        is_dict(profile_dict)
         profile = ResourcesProfile(logger)
-        profile.add_requirement(SCOPE_GLOBAL, 'apic', 'bd', 1.0)
-        profile.add_requirement(SCOPE_GLOBAL, 'apic', 'vrf', 1.0)
-        profile.add_requirement(SCOPE_PROJECT, 'apic', 'contract', 2.0)
-        profile.add_requirement(SCOPE_PROJECT, 'apic', 'epg', 2.0)
+
+        for scope, scope_subdict in profile_dict.iteritems():
+            is_str(scope)
+            is_dict(scope_subdict)
+
+            for system_name, system_subdict in scope_subdict.iteritems():
+                is_str(system_name)
+                is_dict(system_subdict)
+
+                for resource_name, requirement_value \
+                        in system_subdict.iteritems():
+                    is_str(resource_name)
+
+                    profile.add_requirement(
+                        scope,
+                        system_name,
+                        resource_name,
+                        requirement_value
+                    )
 
         return profile
+
+    @classmethod
+    def get_profile_from_string(cls, logger, profile_str):
+        return cls.get_profile_from_dict(logger, json.loads(profile_str))
 
     def __init__(self, logger):
         self._logger = logger
@@ -116,7 +135,7 @@ class ResourcesProfile(object):
     def validate(self, rsm_ctx, project_id):
         errors = []
         self._logger.info(
-            'Validating profile for "{}" project'.format(project_id)
+            'Profile validation started for "{}" project'.format(project_id)
         )
 
         for resource_key, requirement_value in \
@@ -155,3 +174,10 @@ class ResourcesProfile(object):
                 )
 
         return errors
+
+    def __repr__(self):
+        return ''.join(
+            '* {0}: {1}\n'.format(k, v)
+            for k, v
+            in self._requirements_data.iteritems()
+        )

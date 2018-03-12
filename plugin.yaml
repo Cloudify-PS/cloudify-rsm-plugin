@@ -98,7 +98,24 @@ node_types:
 workflows:
   check_resources_availability:
     mapping: rsm.resource_management_plugin.tasks.check_resources_availability
-#    parameters:
-#      project_id: TODO
-#        type: string
-#
+    parameters:
+      project_id:
+        type: string
+        required: true
+        description: >
+          Identifier of project, for which resource profile should be validated
+      profile_name:
+        type: string
+        required: false
+        default: ~
+        description: >
+          Name of secret from secret store which is containing resource profiles
+          definition as "JSON string"
+      profile_str:
+        type: string
+        required: false
+        default: ~
+        description: >
+          Dict containing resource profile definition.
+          It may be used when you would like to pass profile definiction directly
+          without using secret store.

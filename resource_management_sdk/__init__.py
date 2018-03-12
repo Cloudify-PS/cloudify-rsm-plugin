@@ -34,8 +34,11 @@ class Engine(object):
             if not rsm_ctx.next_instance():
                 break
 
-    def _validate_profile(self, rsm_ctx, project_id, profile_str):
-        profile = ResourcesProfile.get_profile_from_string(self.logger, profile_str)
+    def _get_profile(self, profile_str):
+        return ResourcesProfile.get_profile_from_string(self.logger, profile_str)
+
+    def _validate_profile(self, rsm_ctx, profile, project_id, profile_str):
+        self.logger.info('Validating profile: {}'.format(profile))
         return profile.validate(rsm_ctx, project_id)
 
     def _report_collected_data(self, rsm_ctx):
@@ -66,11 +69,17 @@ class Engine(object):
 
     def run(self, ctx, project_id, profile_str):
         rsm_ctx = ResourceManagementContext(ctx, self.rest_client)
+        profile = self._get_profile(profile_str)
 
         self._collect_data(rsm_ctx)
         self._report_collected_data(rsm_ctx)
 
-        errors = self._validate_profile(rsm_ctx, project_id, profile_str)
+        errors = self._validate_profile(
+            rsm_ctx,
+            profile,
+            project_id,
+            profile_str
+        )
         self._report_result(errors)
 
         return errors
