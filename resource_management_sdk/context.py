@@ -9,6 +9,10 @@ from .constants import (
     SCOPE_PROJECT,
     SCOPE_GLOBAL
 )
+from .data import (
+    ResourceAvailability,
+    ResourceKey
+)
 
 
 class Instance(object):
@@ -120,51 +124,6 @@ class RestClientInstanceAdapter(Instance):
         )
 
 
-class ResourceTypeData(object):
-
-    def _set_values(self, quota=None, usage=None):
-        if quota is not None:
-            self.quota = float(quota)
-
-        if usage is not None:
-            if isinstance(usage, list):
-                self.usage = float(len(usage))
-            else:
-                self.usage = float(usage)
-
-        self.calculate_availability()
-
-    def __init__(self, quota=None, usage=None):
-        self.usage = None
-        self.quota = None
-        self.available = None
-
-        self._set_values(quota=quota, usage=usage)
-
-    def update(self, quota=None, usage=None):
-        self._set_values(quota=quota, usage=usage)
-        self.calculate_availability()
-
-    def calculate_availability(self):
-        if self.quota is not None and self.usage is not None:
-            if self.quota >= 0.0:
-                self.available = self.quota - self.usage
-
-        if self.available and self.available < 0.0:
-            raise RuntimeError(
-                'Resource availability cannot be lower than 0 !! '
-                '(calculated {})'
-                .format(self.available)
-            )
-
-    def __repr__(self):
-        return '(Q: {0}, U: {1}, A: {2})'.format(
-            self.quota,
-            self.usage,
-            self.available
-        )
-
-
 class ResourceManagementContext(object):
 
     PROJECT_GLOBAL = SCOPE_GLOBAL
@@ -231,10 +190,11 @@ class ResourceManagementContext(object):
         return self._current_project
 
     def get_resource_key(self, resource_name=None):
-        return (
+        return ResourceKey(
             self._current_project,
             self._current_instance.system_name,
-            resource_name or self._current_instance.resource_name
+            resource_name or self._current_instance.resource_name,
+            self._current_project,
         )
 
     def log(self, level, message, *args):
@@ -311,7 +271,7 @@ class ResourceManagementContext(object):
                 usage=usage
             )
         else:
-            self._collected_data[resource_key] = ResourceTypeData(
+            self._collected_data[resource_key] = ResourceAvailability(
                 quota=quota,
                 usage=usage
             )

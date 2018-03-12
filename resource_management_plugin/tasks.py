@@ -16,4 +16,4 @@ def check_resources_availability(ctx, **kwargs):
         get_handlers()
     )
 
-    engine.run(ctx)
+    engine.run(ctx, 'cfy_test_project', '')

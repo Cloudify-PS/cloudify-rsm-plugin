@@ -1,5 +1,4 @@
 from context import ResourceManagementContext
-
 from handle import (
     NoopHandler,
     ProjectHandler,
@@ -7,6 +6,7 @@ from handle import (
     SimpleUsageHandler,
     OpenstackQuotaHandler
 )
+from profile import ResourcesProfile
 
 DEFAULT_HANDLER_CHAIN = (
     NoopHandler,
@@ -34,12 +34,46 @@ class Engine(object):
             if not rsm_ctx.next_instance():
                 break
 
-        for k, v in rsm_ctx.collected_data.iteritems():
-            self.logger.info('RESOURCE: {} -- {}'.format(k, v))
+    def _validate_profile(self, rsm_ctx, project_id, profile_str):
+        profile = ResourcesProfile.get_profile_from_string(self.logger, profile_str)
+        return profile.validate(rsm_ctx, project_id)
 
-    def run(self, ctx):
+    def _report_collected_data(self, rsm_ctx):
+        self.logger.info(
+            '\nCalculated resources availabilities: \n{}'
+            .format(
+                ''.join(
+                    '* {0}: {1}\n'.format(k, v)
+                    for k, v
+                    in rsm_ctx.collected_data.iteritems()
+                )
+            )
+        )
+
+    def _report_result(self, errors):
+        if errors:
+            self.logger.error(
+                '\nResource availability issues found '
+                'during profile validation: \n{}'
+                .format(
+                    ''.join('* {}\n'.format(e.message) for e in errors)
+                )
+            )
+        else:
+            self.logger.info(
+                'Profile validation ended successfully - no issues found !'
+            )
+
+    def run(self, ctx, project_id, profile_str):
         rsm_ctx = ResourceManagementContext(ctx, self.rest_client)
+
         self._collect_data(rsm_ctx)
+        self._report_collected_data(rsm_ctx)
+
+        errors = self._validate_profile(rsm_ctx, project_id, profile_str)
+        self._report_result(errors)
+
+        return errors
 
 
 def get_handlers():
