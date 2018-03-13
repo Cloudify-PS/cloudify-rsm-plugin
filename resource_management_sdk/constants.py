@@ -1,3 +1,5 @@
+DEFAULT_OPERATION_NAME = 'list'
+
 NODE_TYPE_PROJECT = 'cloudify.nodes.resource_management.Project'
 NODE_TYPE_ROOT = 'cloudify.nodes.Root'
 NODE_TYPE_QUOTA = 'cloudify.nodes.resource_management.Quota'

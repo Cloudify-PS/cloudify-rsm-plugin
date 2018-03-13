@@ -37,8 +37,8 @@ class Engine(object):
     def _get_profile(self, profile_str):
         return ResourcesProfile.get_profile_from_string(self.logger, profile_str)
 
-    def _validate_profile(self, rsm_ctx, profile, project_id, profile_str):
-        self.logger.info('Validating profile: {}'.format(profile))
+    def _validate_profile(self, rsm_ctx, profile, project_id):
+        self.logger.info('Validating profile: {}\n'.format(profile))
         return profile.validate(rsm_ctx, project_id)
 
     def _report_collected_data(self, rsm_ctx):
@@ -77,8 +77,7 @@ class Engine(object):
         errors = self._validate_profile(
             rsm_ctx,
             profile,
-            project_id,
-            profile_str
+            project_id
         )
         self._report_result(errors)
 

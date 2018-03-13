@@ -1,6 +1,8 @@
 from .constants import (
+    DEFAULT_OPERATION_NAME,
     NODE_TYPE_ROOT,
     PROPERTY_DEPLOYMENT_ID,
+    PROPERTY_OPERATION_INPUTS,
     PROPERTY_PROJECT_NAME,
     PROPERTY_RESOURCE_NAME,
     PROPERTY_RUNTIME_PROPERTY_NAME,
@@ -13,6 +15,7 @@ from .data import (
     ResourceAvailability,
     ResourceKey
 )
+from .execution import ExecutionRunner
 
 
 class Instance(object):
@@ -25,7 +28,13 @@ class Instance(object):
         if len(type_hierarchy) > 0:
             return type_hierarchy[0]
 
-    def __init__(self, id, type_hierarchy, properties, runtime_properties):
+    def __init__(self,
+                 id,
+                 deployment_id,
+                 type_hierarchy,
+                 properties,
+                 runtime_properties):
+
         self._id = id
         self._type = self._get_type(type_hierarchy)
         self._system_name = properties.get(PROPERTY_SYSTEM_NAME)
@@ -35,12 +44,18 @@ class Instance(object):
             PROPERTY_RUNTIME_PROPERTY_NAME,
             None
         )
+
+        self._deployment_id = deployment_id
         self._properties = dict(properties)
         self._runtime_properties = dict(runtime_properties)
 
     @property
     def id(self):
         return self._id
+
+    @property
+    def deployment_id(self):
+        return self._deployment_id
 
     @property
     def properties(self):
@@ -87,11 +102,14 @@ class WorkflowCtxInstanceAdapter(Instance):
     def __init__(self, instance_ctx):
         super(WorkflowCtxInstanceAdapter, self).__init__(
             instance_ctx.id,
+            instance_ctx._node_instance.deployment_id,
+            # TODO Replace above with proper method of getting deployment_id
+            # TODO from WorkflowNodeInstance !!!
             instance_ctx.node.type_hierarchy,
             instance_ctx.node.properties,
             instance_ctx._node_instance.runtime_properties
             # TODO Replace above with proper method of getting runtime_properties
-            # from WorkflowNodeInstance !!!
+            # TODO from WorkflowNodeInstance !!!
         )
 
 
@@ -118,6 +136,7 @@ class RestClientInstanceAdapter(Instance):
     def __init__(self, instance_response, node_response):
         super(RestClientInstanceAdapter, self).__init__(
             instance_response.id,
+            instance_response.deployment_id,
             node_response.type_hierarchy,
             node_response.properties,
             instance_response.runtime_properties,
@@ -131,6 +150,7 @@ class ResourceManagementContext(object):
     def __init__(self, ctx, rest_client):
         self.logger = ctx.logger
         self.rest_client = rest_client
+        self.execution_runner = ExecutionRunner(self.log, rest_client)
 
         self._collected_data = {}
         self._errors = {}
@@ -206,8 +226,8 @@ class ResourceManagementContext(object):
 
     def log_state(self):
         self.logger.info(
-            '\n=====\nCurrent {0} state: \ncurrent_project: {1} \n'
-            'instances: {2} \ninstance: {3}\n====='
+            '\n\nCurrent {0} state: \ncurrent_project: {1} \n'
+            'instances: {2} \ninstance: {3}\n'
             .format(
                 self.__class__.__name__,
                 self._current_project,
@@ -261,6 +281,17 @@ class ResourceManagementContext(object):
         )
 
         return True
+
+    def run_execution(self, operation_name=DEFAULT_OPERATION_NAME):
+        return self.execution_runner.run(
+            self._current_instance.deployment_id,
+            self._current_instance.id,
+            operation_name,
+            self._current_instance.properties.get(
+                PROPERTY_OPERATION_INPUTS,
+                {}
+            )
+        )
 
     def set_value(self, quota=None, usage=None, resource_name=None):
         resource_key = self.get_resource_key(resource_name)

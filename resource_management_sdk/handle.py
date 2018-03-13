@@ -202,9 +202,18 @@ class SimpleUsageHandler(_RuntimePropertyHandlerBase):
         return rsm_ctx.instance.type == NODE_TYPE_USAGE
 
     def handle(self, rsm_ctx):
+        rsm_ctx.log('info', 'Executing "list" operation for get usage ...')
+
+        runtime_properties = rsm_ctx.run_execution()
+        rsm_ctx.log(
+            'info',
+            'Got {} runtime_properties after execution',
+            runtime_properties.keys()
+        )
+
         self._process_runtime_properties(
             rsm_ctx,
-            rsm_ctx.instance.runtime_properties,
+            runtime_properties,
             self.VALUE_TYPE_USAGE
         )
 

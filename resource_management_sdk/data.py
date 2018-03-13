@@ -37,8 +37,8 @@ class ResourceAvailability(object):
         if self.availability and self.availability < 0.0:
             raise RuntimeError(
                 'Resource availability cannot be lower than 0 !! '
-                '(calculated {})'
-                .format(self.availability)
+                '(calculated {0} for quota={1} and usage={2})'
+                .format(self.availability, self.quota, self.usage)
             )
 
     def __repr__(self):
