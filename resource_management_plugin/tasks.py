@@ -24,4 +24,4 @@ def check_resources_availability(ctx,
         get_handlers()
     )
 
-    return engine.run(ctx, project_id, profile)
+    engine.run(ctx, project_id, profile)

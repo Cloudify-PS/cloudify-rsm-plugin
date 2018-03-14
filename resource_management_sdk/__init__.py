@@ -1,3 +1,5 @@
+from cloudify.exceptions import NonRecoverableError
+
 from context import ResourceManagementContext
 from handle import (
     NoopHandler,
@@ -55,13 +57,13 @@ class Engine(object):
 
     def _report_result(self, errors):
         if errors:
-            self.logger.error(
-                '\nResource availability issues found '
-                'during profile validation: \n{}'
-                .format(
-                    ''.join('* {}\n'.format(e.message) for e in errors)
-                )
-            )
+            errors_str = ''.join('* {}\n'.format(e.message) for e in errors)
+            message = '\nResource availability issues found ' \
+                      'during profile validation: \n{}'.format(errors_str)
+
+            self.logger.error(message)
+            raise NonRecoverableError(message)
+
         else:
             self.logger.info(
                 'Profile validation ended successfully - no issues found !'
@@ -80,8 +82,6 @@ class Engine(object):
             project_id
         )
         self._report_result(errors)
-
-        return errors
 
 
 def get_handlers():
