@@ -1,0 +1,78 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://www.getcloudify.org/spec/cloudify/4.2/types.yaml
+  - http://www.getcloudify.org/spec/openstack-plugin/2.7.2/plugin.yaml
+  - http://www.getcloudify.org/spec/utilities-plugin/1.5.1/plugin.yaml
+  - https://raw.githubusercontent.com/Cloudify-PS/cloudify-rsm-plugin/master/plugin.yaml
+
+inputs:
+  project_blueprint_id:
+    type: string
+
+  project_1_deployment_id:
+    type: string
+    default: 'rsm_os_test_project_1'
+
+  project_1_id:
+    type: string
+
+  project_1_name:
+    type: string
+
+  project_2_deployment_id:
+    type: string
+    default: 'rsm_os_test_project_2'
+
+  project_2_id:
+    type: string
+
+  project_2_name:
+    type: string
+
+node_templates:
+  project_1_deployment:
+    type: cloudify.nodes.DeploymentProxy
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: { get_input: project_blueprint_id }
+        deployment:
+          id: { get_input: project_1_deployment_id }
+          inputs:
+            project_id: { get_input: project_1_id }
+            project_name: { get_input: project_1_name }
+          outputs: {}
+
+  project_1:
+    type: cloudify.nodes.resource_management.Project
+    properties:
+      project_name: { get_input: project_1_name }
+      deployment_id: { get_input: project_1_deployment_id }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: project_1_deployment
+
+  project_2_deployment:
+    type: cloudify.nodes.DeploymentProxy
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: { get_input: project_blueprint_id }
+        deployment:
+          id: { get_input: project_2_deployment_id }
+          inputs:
+            project_id: { get_input: project_2_id }
+            project_name: { get_input: project_2_name }
+          outputs: {}
+
+  project_2:
+    type: cloudify.nodes.resource_management.Project
+    properties:
+      project_name: { get_input: project_2_name }
+      deployment_id: { get_input: project_2_deployment_id }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: project_2_deployment

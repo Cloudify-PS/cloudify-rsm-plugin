@@ -1,0 +1,49 @@
+node_types:
+  cloudify.nodes.resource_management.openstack.Quota:
+    derived_from: cloudify.nodes.resource_management.Quota
+    properties:
+      system_name:
+        default: 'openstack'
+      use_external_resource:
+        default: true
+      resource_id:
+        type: string
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.keystone_plugin.project.create
+          inputs:
+            args:
+              default: {}
+        configure:
+          implementation: openstack.keystone_plugin.project.get_project_quota
+      cloudify.interfaces.operations:
+        update:
+          implementation: openstack.keystone_plugin.project.update_project_quota
+          inputs:
+            quota:
+              default: {}
+
+  cloudify.nodes.resource_management.openstack.Usage:
+    derived_from: cloudify.nodes.resource_management.Usage
+    properties:
+      openstack_config:
+        default: {}
+      system_name:
+        default: 'openstack'
+      operation_inputs:
+        default:
+          args: {}
+
+  cloudify.nodes.resource_management.openstack.neutron.Usage:
+    derived_from: cloudify.nodes.resource_management.openstack.Usage
+    properties:
+      project_id:
+        type: string
+        required: true
+      operation_inputs:
+        default:
+          args:
+            tenant_id: { get_property: [ SELF, project_id ] }
