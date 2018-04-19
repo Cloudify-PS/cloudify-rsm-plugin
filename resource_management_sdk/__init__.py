@@ -21,36 +21,29 @@ DEFAULT_HANDLER_CHAIN = (
 
 class Engine(object):
 
-    def __init__(self, logger, rest_client, handlers):
-        self.logger = logger
+    def __init__(self, ctx, rest_client):
+        self.logger = ctx.logger
         self.rest_client = rest_client
-        self.handlers = [handler_cls(logger) for handler_cls in handlers]
-
-    def _collect_data(self, rsm_ctx):
-        while True:
-            for handler in self.handlers:
-                if handler.can_handle(rsm_ctx):
-                    handler.handle(rsm_ctx)
-                    break
-
-            if not rsm_ctx.next_instance():
-                break
+        self.rsm_ctx = ResourceManagementContext(ctx, self.rest_client)
 
     def _get_profile(self, profile_str):
-        return ResourcesProfile.get_profile_from_string(self.logger, profile_str)
+        return ResourcesProfile.get_profile_from_string(
+            self.logger,
+            profile_str
+        )
 
     def _validate_profile(self, rsm_ctx, profile, project_id):
         self.logger.info('Validating profile: {}\n'.format(profile))
         return profile.validate(rsm_ctx, project_id)
 
-    def _report_collected_data(self, rsm_ctx):
+    def _report_data(self):
         self.logger.info(
             '\nCalculated resources availabilities: \n{}'
             .format(
                 ''.join(
                     '* {0}: {1}\n'.format(k, v)
                     for k, v
-                    in rsm_ctx.collected_data.iteritems()
+                    in self.rsm_ctx.collected_data.iteritems()
                 )
             )
         )
@@ -69,20 +62,32 @@ class Engine(object):
                 'Profile validation ended successfully - no issues found !'
             )
 
-    def run(self, ctx, project_id, profile_str):
-        rsm_ctx = ResourceManagementContext(ctx, self.rest_client)
+    def run(self, handlers, report=True):
+        handlers = [handler_cls(self.logger) for handler_cls in handlers]
+
+        while True:
+            for handler in handlers:
+                if handler.can_handle(self.rsm_ctx):
+                    handler.handle(self.rsm_ctx)
+                    break
+
+            if not self.rsm_ctx.next_instance():
+                break
+
+        if report:
+            self._report_data()
+
+    def validate_profile(self, project_id, profile_str, report=True):
         profile = self._get_profile(profile_str)
 
-        self._collect_data(rsm_ctx)
-        self._report_collected_data(rsm_ctx)
-
         errors = self._validate_profile(
-            rsm_ctx,
+            self.rsm_ctx,
             profile,
             project_id
         )
-        self._report_result(errors)
 
+        if report:
+            self._report_result(errors)
 
-def get_handlers():
-    return DEFAULT_HANDLER_CHAIN
+        return errors
+
