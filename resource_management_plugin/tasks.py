@@ -9,6 +9,13 @@ from . import get_profile
 
 
 @workflow
+def calculate_resources_availability(ctx, **kwargs):
+    rest_client = manager.get_rest_client()
+    engine = Engine(ctx, rest_client)
+    engine.run(DEFAULT_HANDLER_CHAIN)
+
+
+@workflow
 def check_resources_availability(ctx,
                                  project_id,
                                  profile_name=None,

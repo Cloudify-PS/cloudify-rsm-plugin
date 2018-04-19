@@ -96,6 +96,9 @@ node_types:
           It should be already installed
 
 workflows:
+  calculate_resources_availability:
+    mapping: rsm.resource_management_plugin.tasks.calculate_resources_availability
+
   check_resources_availability:
     mapping: rsm.resource_management_plugin.tasks.check_resources_availability
     parameters:
