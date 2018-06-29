@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='cloudify_resource_management',
-    version='0.0.1',
+    version='0.0.2',
     author='Krzysztof Bijakowski',
     author_email='krzysztof.bijakowski@cloudify.co',
     description='Resources tracking & quota validation',

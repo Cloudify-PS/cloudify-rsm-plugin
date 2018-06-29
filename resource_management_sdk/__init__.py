@@ -1,22 +1,43 @@
 from cloudify.exceptions import NonRecoverableError
 
 from context import ResourceManagementContext
-from handle import (
-    NoopHandler,
-    ProjectHandler,
-    SimpleQuotaHandler,
-    SimpleUsageHandler,
-    OpenstackQuotaHandler
-)
+from handle import *
 from profile import ResourcesProfile
 
-DEFAULT_HANDLER_CHAIN = (
-    NoopHandler,
-    ProjectHandler,
-    OpenstackQuotaHandler,
-    SimpleQuotaHandler,
-    SimpleUsageHandler
-)
+SIMPLE_HANDLER_CHAIN = [
+    [
+        NoopHandler,
+        ProjectHandler,
+        OpenstackQuotaHandler,
+        SimpleQuotaHandler,
+        SimpleUsageHandler
+    ]
+]
+
+PARALLEL_EXECUTIONS_HANDLER_CHAIN = [
+    [
+        ProjectHandler
+    ],
+    [
+        ExecutionStartUsageHandler
+    ],
+    [
+        OpenstackQuotaHandler,
+        SimpleQuotaHandler
+    ],
+    [
+        ExecutionResultUsageHandler
+    ]
+]
+
+SIMPLE_MODE_KEYWORD = 'simple'
+PARALLEL_MODE_KEYWORD = 'parallel'
+DEFAULT_MODE = SIMPLE_MODE_KEYWORD
+
+MODES = {
+    SIMPLE_MODE_KEYWORD: SIMPLE_HANDLER_CHAIN,
+    PARALLEL_MODE_KEYWORD: PARALLEL_EXECUTIONS_HANDLER_CHAIN
+}
 
 
 class Engine(object):
@@ -62,8 +83,9 @@ class Engine(object):
                 'Profile validation ended successfully - no issues found !'
             )
 
-    def run(self, handlers, report=True):
-        handlers = [handler_cls(self.logger) for handler_cls in handlers]
+    def _run(self, handler_chain, report=True):
+        self.rsm_ctx.reset()
+        handlers = [handler_cls(self.logger) for handler_cls in handler_chain]
 
         while True:
             for handler in handlers:
@@ -76,6 +98,19 @@ class Engine(object):
 
         if report:
             self._report_data()
+
+    def run(self, handler_chains, report=True):
+        for handler_chain in handler_chains:
+            if type(handler_chain) not in set([list, tuple]):
+                handler_chain = [handler_chain]
+
+            self.logger.info(
+                '\n\n\n---------------------------\n\n'
+                'Running rsm-plugin engine for handlers chain: {}'
+                '\n\n---------------------------\n\n\n'
+                .format(handler_chain)
+            )
+            self._run(handler_chain, report)
 
     def validate_profile(self, project_id, profile_str, report=True):
         profile = self._get_profile(profile_str)

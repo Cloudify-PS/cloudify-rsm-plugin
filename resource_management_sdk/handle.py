@@ -218,6 +218,45 @@ class SimpleUsageHandler(_RuntimePropertyHandlerBase):
         )
 
 
+class ExecutionStartUsageHandler(_RuntimePropertyHandlerBase):
+
+    def can_handle(self, rsm_ctx):
+        return rsm_ctx.instance.type == NODE_TYPE_USAGE
+
+    def handle(self, rsm_ctx):
+        rsm_ctx.log(
+            'info',
+            'Starting executing for "list" operation for get usage ...'
+        )
+
+        execution_id = rsm_ctx.run_execution(wait=False)
+        rsm_ctx.log(
+            'info',
+            'Execution started with ID: {} ...'.format(execution_id)
+        )
+
+
+class ExecutionResultUsageHandler(_RuntimePropertyHandlerBase):
+
+    def can_handle(self, rsm_ctx):
+        return rsm_ctx.instance.type == NODE_TYPE_USAGE
+
+    def handle(self, rsm_ctx):
+        runtime_properties = rsm_ctx.get_execution_result()
+
+        rsm_ctx.log(
+            'info',
+            'Got {} runtime_properties after execution',
+            runtime_properties.keys()
+        )
+
+        self._process_runtime_properties(
+            rsm_ctx,
+            runtime_properties,
+            self.VALUE_TYPE_USAGE
+        )
+
+
 class OpenstackQuotaHandler(SimpleQuotaHandler):
 
     OPENSTACK_COMPONENT_NAMES = ['cinder', 'neutron', 'nova']

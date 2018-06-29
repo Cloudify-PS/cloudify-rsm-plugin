@@ -3,7 +3,7 @@ plugins:
     executor: central_deployment_agent
     package_name: cloudify_resource_management
     source: https://github.com/Cloudify-PS/cloudify-rms-plugin/archive/master.zip
-    package_version: '0.0.1'
+    package_version: '0.0.2'
 
 node_types:
   cloudify.nodes.resource_management.Usage:
@@ -98,6 +98,14 @@ node_types:
 workflows:
   calculate_resources_availability:
     mapping: rsm.resource_management_plugin.tasks.calculate_resources_availability
+    parameters:
+      mode:
+        type: string
+        required: false
+        default: 'simple'
+        description: >
+          simple - all executions of list workflow will be executed sequentially
+          parallel - executions of list workflow will be executed in parallel
 
   check_resources_availability:
     mapping: rsm.resource_management_plugin.tasks.check_resources_availability
@@ -122,3 +130,10 @@ workflows:
           Dict containing resource profile definition.
           It may be used when you would like to pass profile definiction directly
           without using secret store.
+      mode:
+        type: string
+        required: false
+        default: 'simple'
+        description: >
+          simple - all executions of list workflow will be executed sequentially
+          parallel - executions of list workflow will be executed in parallel

@@ -138,7 +138,6 @@ class ExecutionRunner(object):
         return self.poller.run(execution_id)
 
     def _get_runtime_properties(self, node_instance_id):
-
         node_instance_response = self.rest_client.node_instances.get(
             node_instance_id
         )
@@ -173,12 +172,11 @@ class ExecutionRunner(object):
             operation_inputs
         )
 
-        self.logger_method(
-            'debug',
-            'Got execution ID: {} - waiting for it to be finished',
-            execution_id
-        )
+        self.logger_method('debug', 'Got execution ID: {}', execution_id)
 
+        return execution_id
+
+    def wait_for_result(self, execution_id, node_instance_id):
         if self._check_execution_status(execution_id):
             self.logger_method(
                 'debug',
@@ -189,3 +187,21 @@ class ExecutionRunner(object):
             return self._get_runtime_properties(node_instance_id)
 
         return {}
+
+    def run_and_wait_for_result(self,
+                                deployment_id,
+                                node_instance_id,
+                                operation_name,
+                                operation_inputs,
+                                **kwargs):
+
+        execution_id = self.run(
+            deployment_id,
+            node_instance_id,
+            operation_name,
+            operation_inputs,
+            **kwargs
+        )
+
+        return self.wait_for_result(execution_id, node_instance_id)
+

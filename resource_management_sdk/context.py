@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from .constants import (
     DEFAULT_OPERATION_NAME,
     NODE_TYPE_ROOT,
@@ -48,6 +50,7 @@ class Instance(object):
         self._deployment_id = deployment_id
         self._properties = dict(properties)
         self._runtime_properties = dict(runtime_properties)
+        self._execution_id = None
 
     @property
     def id(self):
@@ -91,6 +94,13 @@ class Instance(object):
     @property
     def type(self):
         return self._type
+
+    @property
+    def execution_id(self):
+        return self._execution_id
+
+    def set_execution_id(self, execution_id=None):
+        self._execution_id = execution_id
 
 
 class WorkflowCtxInstanceAdapter(Instance):
@@ -155,43 +165,52 @@ class ResourceManagementContext(object):
         self._collected_data = {}
         self._errors = {}
 
-        self._instances = {
+        self._instances = OrderedDict({
             self.PROJECT_GLOBAL: WorkflowCtxInstanceAdapter.get_instances(ctx)
-        }
-        self._current_project = self.PROJECT_GLOBAL
-        self._next_instance()
+        })
+
+        self.reset()
 
     def _format_instances(self):
         return ''.join(
             [
-                '{0}={1} |'.format(k, len(v))
+                '{0}={1} |'.format(k, len(v) - v.index(self, _current_instance))
                 for k, v
                 in self._instances.iteritems()
             ]
         )
 
     def _next_instance(self):
-        project_instances = self._instances.get(self._current_project)
+        project_instances = self._instances.get(self._current_project, [])
+        position = 0
 
-        if len(project_instances) > 0:
-            self._current_instance = project_instances.pop()
-            self._instances[self._current_project] = project_instances
+        if self._current_instance in project_instances:
+            position = project_instances.index(self._current_instance) + 1
 
+        if position < len(project_instances):
+            self._current_instance = project_instances[position]
             self.log_state()
+
             return True
-        else:
-            return self._next_project()
+
+        return self._next_project()
 
     def _next_project(self):
-        self._instances.pop(self._current_project)
+        if not self._current_project:
+            self._current_project = self.PROJECT_GLOBAL
+            return self._next_instance()
+
         projects = self._instances.keys()
 
-        if len(projects) == 0:
-            self.logger.info('No projects left to be processed')
-            return False
+        if self._current_project in projects:
+            position = projects.index(self._current_project) + 1
 
-        self._current_project = projects[0]
-        return self._next_instance()
+            if position < len(projects):
+                self._current_project = projects[position]
+                return self._next_instance()
+
+        self.logger.info('No projects left to be processed')
+        return False
 
     @property
     def collected_data(self):
@@ -239,6 +258,11 @@ class ResourceManagementContext(object):
     def next_instance(self):
         return self._next_instance()
 
+    def reset(self):
+        self._current_project = None
+        self._current_instance = None
+        return self._next_instance()
+
     def resolve_project(self):
         properties = self._current_instance.properties
         deployment_id = properties.get(PROPERTY_DEPLOYMENT_ID, None)
@@ -282,8 +306,8 @@ class ResourceManagementContext(object):
 
         return True
 
-    def run_execution(self, operation_name=DEFAULT_OPERATION_NAME):
-        return self.execution_runner.run(
+    def run_execution(self, operation_name=DEFAULT_OPERATION_NAME, wait=True):
+        execution_id = self.execution_runner.run(
             self._current_instance.deployment_id,
             self._current_instance.id,
             operation_name,
@@ -291,6 +315,25 @@ class ResourceManagementContext(object):
                 PROPERTY_OPERATION_INPUTS,
                 {}
             )
+        )
+
+        self._current_instance.set_execution_id(execution_id)
+
+        if wait:
+            result = self.execution_runner.wait_for_result(
+                execution_id,
+                self._current_instance.id
+            )
+
+            self._current_instance.set_execution_id()
+            return result
+
+        return execution_id
+
+    def get_execution_result(self):
+        return self.execution_runner.wait_for_result(
+            self._current_instance.execution_id,
+            self._current_instance.id
         )
 
     def set_value(self, quota=None, usage=None, resource_name=None):
