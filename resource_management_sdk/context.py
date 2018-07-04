@@ -24,7 +24,6 @@ class ResourceManagementContext(object):
         self.execution_runner = ExecutionRunner(self.log, rest_client)
 
         self._collected_data = {}
-        self._errors = {}
         self._instances = Instances(
             ctx.logger,
             WorkflowCtxInstanceAdapter.get_instances(ctx)
@@ -32,11 +31,17 @@ class ResourceManagementContext(object):
 
     @property
     def collected_data(self):
-        return self._collected_data
+        result = {}
+
+        for resource_key, resource_data in self._collected_data.iteritems():
+            if resource_data.availability:
+                result[resource_key] = resource_data
+
+        return result
 
     @property
-    def errors(self):
-        return self._errors
+    def collected_data_raw(self):
+        return self._collected_data
 
     @property
     def instance(self):
