@@ -70,3 +70,11 @@ cfy blueprints delete rsm_openstack_project
 cfy secrets delete resource_profile_test_ok
 cfy secrets delete resource_profile_test_nok
 ```
+
+To run executions in **parallel mode** please pass:
+
+``
+-p parallel
+``
+
+argument to CLI execution invocation

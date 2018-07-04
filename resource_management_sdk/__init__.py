@@ -90,7 +90,14 @@ class Engine(object):
         while True:
             for handler in handlers:
                 if handler.can_handle(self.rsm_ctx):
+                    self.logger.info(
+                        'HANDLER {} start'.format(handler.__class__)
+                    )
                     handler.handle(self.rsm_ctx)
+                    self.logger.info(
+                        'HANDLER {} end'.format(handler.__class__)
+                    )
+
                     break
 
             if not self.rsm_ctx.next_instance():
