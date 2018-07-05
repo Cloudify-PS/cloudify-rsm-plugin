@@ -140,3 +140,44 @@ workflows:
         description: >
           simple - all executions of list workflow will be executed sequentially
           parallel - executions of list workflow will be executed in parallel
+
+  execute_conditionally:
+    mapping: rsm.resource_management_plugin.tasks.execute_conditionally
+    parameters:
+      execution_dict:
+        required: true
+        description: >
+          Dictionary describes execution compliant with Cloudify Manager REST API executions start operation.
+          Should contains such fields:
+          deployment_id - mandatory
+          workflow_id - mandatory
+          allow_custom_parameters - optional
+          parameters - optional
+          force - optional
+      project_id:
+        type: string
+        required: true
+        description: >
+          Identifier of project, for which resource profile should be validated
+      profile_name:
+        type: string
+        required: false
+        default: ~
+        description: >
+          Name of secret from secret store which is containing resource profiles
+          definition as "JSON string"
+      profile_str:
+        type: string
+        required: false
+        default: ~
+        description: >
+          Dict containing resource profile definition.
+          It may be used when you would like to pass profile definiction directly
+          without using secret store.
+      mode:
+        type: string
+        required: false
+        default: 'simple'
+        description: >
+          simple - all executions of list workflow will be executed sequentially
+          parallel - executions of list workflow will be executed in parallel
