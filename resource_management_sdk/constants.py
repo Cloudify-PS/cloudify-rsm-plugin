@@ -4,6 +4,7 @@ NODE_TYPE_PROJECT = 'cloudify.nodes.resource_management.Project'
 NODE_TYPE_ROOT = 'cloudify.nodes.Root'
 NODE_TYPE_QUOTA = 'cloudify.nodes.resource_management.Quota'
 NODE_TYPE_USAGE = 'cloudify.nodes.resource_management.Usage'
+NODE_TYPE_RESULT = 'cloudify.nodes.resource_management.Result'
 
 PROPERTY_DEPLOYMENT_ID = 'deployment_id'
 PROPERTY_OPERATION_INPUTS = 'operation_inputs'

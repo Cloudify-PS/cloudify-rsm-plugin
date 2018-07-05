@@ -1,3 +1,5 @@
+import collections
+
 from .constants import (
     DEFAULT_OPERATION_NAME,
     PROPERTY_DEPLOYMENT_ID,
@@ -28,6 +30,7 @@ class ResourceManagementContext(object):
             ctx.logger,
             WorkflowCtxInstanceAdapter.get_instances(ctx)
         )
+        self._result_instance_ids = []
 
     @property
     def collected_data(self):
@@ -36,6 +39,24 @@ class ResourceManagementContext(object):
         for resource_key, resource_data in self._collected_data.iteritems():
             if resource_data.availability:
                 result[resource_key] = resource_data
+
+        return result
+
+    @property
+    def collected_data_dict(self):
+        def merge(dst, src):
+            for k, v in src.iteritems():
+                if k in dst and \
+                        isinstance(dst[k], dict) and \
+                        isinstance(src[k], collections.Mapping):
+                    merge(dst[k], src[k])
+                else:
+                    dst[k] = src[k]
+
+        result = {}
+
+        for resource_key, resource_data in self.collected_data.iteritems():
+            merge(result, resource_key.as_dict(resource_data.as_dict()))
 
         return result
 
@@ -50,6 +71,10 @@ class ResourceManagementContext(object):
     @property
     def project(self):
         return self._instances.current_project
+
+    @property
+    def result_instances(self):
+        return self._result_instance_ids
 
     def get_resource_key(self, resource_name=None):
         return ResourceKey(
@@ -178,3 +203,44 @@ class ResourceManagementContext(object):
                 quota=quota,
                 usage=usage
             )
+
+    def set_runtime_properties(self,
+                               runtime_properties,
+                               instance_id=None,
+                               update=False):
+
+        if not instance_id:
+            instance_id = self.instance.id
+
+        instance_data = self.rest_client.node_instances.get(instance_id)
+        version = instance_data['version']
+
+        if update:
+            runtime_properties.update(
+                instance_data['runtime_properties']
+            )
+
+        self.logger.debug(
+            'Setting {0} runtime_properties for '
+            'node_instance: {1} with version: {2}'
+            .format(runtime_properties, instance_id, version)
+        )
+
+        self.rest_client.node_instances.update(
+            instance_id or self.instance.id,
+            runtime_properties=runtime_properties,
+            version=version
+        )
+
+    def add_result_instance_id(self, instance_id=None):
+        if not instance_id:
+            instance_id = self.instance.id
+
+        if instance_id not in self._result_instance_ids:
+            self._result_instance_ids.append(instance_id)
+
+    def dump(self):
+        return {
+            'instances': self._instances.dump(),
+            'availability': self.collected_data_dict
+        }

@@ -76,3 +76,17 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: project_2_deployment
+
+  result:
+    type: cloudify.nodes.resource_management.Result
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: project_1
+      - type: cloudify.relationships.depends_on
+        target: project_2
+
+outputs:
+  availability_data:
+    value: { get_attribute: [result, data] }
+  validation_result:
+    value: { get_attribute: [result, errors] }

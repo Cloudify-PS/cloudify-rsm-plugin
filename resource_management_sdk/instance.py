@@ -243,6 +243,23 @@ class Instances(object):
 
         return self.next_instance()
 
+    def dump(self):
+        return {
+            'total': len(self._operational_data),
+            'current': self._position + 1,
+            'left': self.left_instances,
+            'processed': [
+                instance_info['instance'].id
+                for instance_info in self._operational_data
+                if instance_info['visited']
+            ],
+            'to_be_processed': [
+                instance_info['instance'].id
+                for instance_info in self._operational_data
+                if not instance_info['visited']
+            ]
+        }
+
     def get_left_instances_info(self):
         projects_info = ''.join(
             [

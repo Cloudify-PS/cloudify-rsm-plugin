@@ -95,6 +95,9 @@ node_types:
           Deployment ID for deployment created from project blueprint
           It should be already installed
 
+  cloudify.nodes.resource_management.Result:
+    derived_from: cloudify.nodes.Root
+
 workflows:
   calculate_resources_availability:
     mapping: rsm.resource_management_plugin.tasks.calculate_resources_availability

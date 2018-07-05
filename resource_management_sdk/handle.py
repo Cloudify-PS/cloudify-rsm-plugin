@@ -2,6 +2,7 @@ from .constants import (
     NODE_TYPE_PROJECT,
     NODE_TYPE_QUOTA,
     NODE_TYPE_USAGE,
+    NODE_TYPE_RESULT,
     SYSTEM_NAME_OPENSTACK
 )
 
@@ -312,3 +313,21 @@ class OpenstackQuotaHandler(SimpleQuotaHandler):
     def can_handle(self, rsm_ctx):
         return super(OpenstackQuotaHandler, self).can_handle(rsm_ctx) and \
                SYSTEM_NAME_OPENSTACK in rsm_ctx.instance.system_name
+
+
+class ResultHandler(Handler):
+
+    def can_handle(self, rsm_ctx):
+        return rsm_ctx.instance.type == NODE_TYPE_RESULT
+
+    def handle(self, rsm_ctx):
+        rsm_ctx.log(
+            'info',
+            'Dumping gathered data to runtime_properties of {} node instance',
+            rsm_ctx.instance.id
+        )
+
+        rsm_ctx.add_result_instance_id()
+        rsm_ctx.set_runtime_properties({
+            'data': rsm_ctx.dump()
+        })

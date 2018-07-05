@@ -11,6 +11,9 @@ SIMPLE_HANDLER_CHAIN = [
         OpenstackQuotaHandler,
         SimpleQuotaHandler,
         SimpleUsageHandler
+    ],
+    [
+        ResultHandler
     ]
 ]
 
@@ -27,6 +30,9 @@ PARALLEL_EXECUTIONS_HANDLER_CHAIN = [
     ],
     [
         ExecutionResultUsageHandler
+    ],
+    [
+        ResultHandler
     ]
 ]
 
@@ -68,6 +74,14 @@ class Engine(object):
                 )
             )
         )
+
+    def _set_result_as_runtime_properties(self, errors):
+        for instance_id in self.rsm_ctx.result_instances:
+            self.rsm_ctx.set_runtime_properties(
+                {'errors': [error.message for error in errors]},
+                instance_id,
+                True
+            )
 
     def _report_result(self, errors):
         if errors:
@@ -127,6 +141,8 @@ class Engine(object):
             profile,
             project_id
         )
+
+        self._set_result_as_runtime_properties(errors)
 
         if report:
             self._report_result(errors)

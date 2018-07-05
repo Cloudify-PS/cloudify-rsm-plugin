@@ -41,6 +41,13 @@ class ResourceAvailability(object):
                 .format(self.availability, self.quota, self.usage)
             )
 
+    def as_dict(self):
+        return {
+            'quota': self.quota,
+            'usage': self.usage,
+            'availability': self.availability
+        }
+
     def __repr__(self):
         return '(Q: {0}, U: {1}, A: {2})'.format(
             self.quota,
@@ -78,6 +85,15 @@ class ResourceKey(object):
     @property
     def system_name(self):
         return self._system_name
+
+    def as_dict(self, value):
+        return {
+            self._project_id or self._scope: {
+                self._system_name: {
+                    self._resource_name: value
+                }
+            }
+        }
 
     def as_tuple(self):
         return self._project_id, self._system_name, self._resource_name
