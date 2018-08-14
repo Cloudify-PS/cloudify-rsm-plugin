@@ -1,4 +1,4 @@
-#Cloudify resource management plugin
+# Cloudify resource management plugin
 
 ## Overview
 
@@ -9,17 +9,17 @@ in combination with different plugins to allow some basic resource management op
 * Validating resources requirements
 * Running of execution only in case if resources requirements are met
 
-Resource management plugins is independent from infrastructure management - 
+Resource management plugin is independent from infrastructure management - 
 it can only manage information about usages, quotas etc. but it cannot obtain such information by itself.
-For this purpose some infrastructure management plugin should be use (e.g. cloudify-openstack-plugin).
+For this purpose some infrastructure management plugin should be used (e.g. cloudify-openstack-plugin).
 
 ## Concepts
 
 * **Resources**
 
-    RSM plugin (as it name says) is operating on resources.
+    RSM plugin (as it name says) operates on resources.
     By *resource* we can mean each type of object existing in some computer system, for which we can calculate *number of existing objects* (***usage***) and *limit of possible existing objects* (***quota***).
-    RSM plugin is using these values to calculate ***availability*** - number of objects which we can create in given computer system.
+    RSM plugin uses these values to calculate ***availability*** - number of objects which we can create in given computer system.
     Then value of *availability* is used to take proper decisions.
     
 * **Plugin**
@@ -30,14 +30,14 @@ For this purpose some infrastructure management plugin should be use (e.g. cloud
     * Validating resources requirements
     * Running of execution only in case if resources requirements are met
     
-    Plugin needs blueprint(s) prepared in specific manner (described later) and provides set of ***workflows*** which are using blueprint(s) deployment(s) to execute given operation.
+    Plugin needs blueprint(s) prepared in specific manner (described later) and provides set of ***workflows***. They use blueprint(s) deployment(s) to execute given operation.
     Plugin also provides support for multitenancy (it can operate in scope of whole system or single tenant / project).
     
 * **Node types**
 
     Plugin exposes few node types describing resources in its *plugin.yaml* file.
     These node types have no interfaces assigned - thery are like interfaces in object-oriented programming languages.
-    You need to assign proper interfaces (from separate VIM / system / device plugin) to provide support for given operation execution (like: quota get and set, onjects list / usage calcluation).
+    You need to assign proper interfaces (from separate VIM / system / device plugin) to provide support for given operation execution (like: quota get and set, objects list / usage calcluation).
     It should be done in the blueprint.
     
 * **Blueprints**
@@ -63,8 +63,8 @@ For this purpose some infrastructure management plugin should be use (e.g. cloud
     
     * **system name** - name of system managing this resource. It can be e.g. *openstack* or *aws*. 
       It can be also name of given instance of this system e.g. *openstack_rackspace*. 
-      Systems may be not only Virtual Infrastructure Managers but also single devices for which resource management plugin will be used e.g. *n7k*
-      In general identifier of any entity which is using resources which will be checked by RSM plugin.
+      Systems may be not only Virtual Infrastructure Managers but also single devices for which resource management plugin can be used e.g. *n7k*.
+      In general it is identifier of any entity which is using resources which will be checked by RSM plugin.
       
     * **resource name** - identifier of resource (type of object in some system identified by **system name**). For example - for openstack it may be *security_group* or *flavor* or ... 
      
@@ -176,16 +176,53 @@ For this purpose some infrastructure management plugin should be use (e.g. cloud
     * ***mode*** - flag decides how workflow will run executions to gather required values (e.g. *list* operation for usage).
       It can be *simple* (default) or *parallel*.
       
-To check how to define ***resource profile*** please check ***openstack-resources-management*** example.
+To see how to define ***resource profile*** please check ***openstack-resources-management*** example.
  
          
 ## Implementation
 
-TBD
+Plugin has been implemented as dedicated class (***Engine***) which operates on collection of ***Instance*** objects using ***Handler***s.
+***Instance*** object is a representation of single *node instance* from the blueprint.
+Subclasses of ***Handler*** class contains logic called to process specific kind of instance (*quota*, *usage*, etc.).
+***Engine*** initialized with ***Handler*** list iterates through list of ***Instance*** object trying to find ***Handler*** suitable to this kind of ***Instance*** object.
+If there is suitable ***Handler*** its logic will be executed for given ***Instance***.
+***Engine*** and ***Handler*** classes are using ***ResourceManagementContext*** class as *knowledge base*.
+Role of ***ResourceManagementContext*** is to store information about instances, already gathered quota / usage / availability data etc.
 
-* Context
-* Instances
-* Handlers
+Code structure:
+
+* **resource_management_plugin** - contains all ***CloudifyContext***-related stuff
+    * **tasks** - contains entrypoint methods used by Cloudify workflows
+* **resource_management_sdk**  - contains RSM plugin logic independent from ***CloudifyContext***
+    * **constants** - declatarions of all constants used in plugin code  
+    * **context** - ***ResourceManagementContext*** implementation 
+    * **data** - all classes acting as data units used by ***Engine*** and ***ResourceManagementContext***
+    * **execution** - logic related to running executions (e.g. for *list* operation) ald polling their results
+    * **handler** - all ***Handler*** subclasses implementations
+    * **instance** - stuff related to **Instance** objects (processing) 
+    * **profile** - all things related to resource profile
+    
+Currently supported handlers:
+* **ProjectHandler** - used for *project* instances - can read all instances from project deployment and add it into ***ResourceManagementContext***
+* **SimpleQuotaHandler** - gathers quota value from instance runtime_properties 
+* **SimpleUsageHandler** - gathers usage value from instance runtime_properties (used in *simple* mode)
+* **ExecutionStartUsageHandler** - starts (*list*) operartion execution for usage value gathering (used in *parallel* mode)
+* **ExecutionResultUsageHandler** - checks if (*list*) operartion execution started by ***ExecutionStartUsageHandler*** has ended. If yes gathers result as usage value (used in *parallel* mode)
+* **OpenstackQuotaHandler** - gathers quota value from instance runtime_properties and do necessary resources names translation for Openstack
+* **ResultHandler** - used for *result* instances - dumps current ***ResourceManagementContext*** as runtime_property
+
+## How to extend
+
+Sometimes you may need to write some piece of custom logic for e.g. quota or usage handling. 
+Good example is ***OpenstackQuotaHandler*** - it has been introduced because of cohesion in resources naming convention in Openstack.
+You can write your own handler.
+To do it you need to add new class in ***resource_management_sdk.handlers*** extending ***Handler*** class.
+You need to impelment 2 methods:
+
+* ***def can_handle(self, rsm_ctx)*** - returns true if Handler is able to process given type of *instance*
+* ***def handle(self, rsm_ctx)*** - contains logic which should be executed for given *instance*
+
+Then you need to add your handler to on handler chain(s) ***SIMPLE_HANDLER_CHAIN*** or / and ***PARALLEL_EXECUTIONS_HANDLER_CHAIN*** in ***resource_management_sdk/__init__.py*** 
 
 
 ## Examples
