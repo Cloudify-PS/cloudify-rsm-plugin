@@ -41,8 +41,8 @@ class NoAvailableResourcesError(ProfileValidationError):
 
 class CannotDetermineAvailabilityError(ProfileValidationError):
 
-    MESSAGE_TEMPLATE = 'Cannot validate profile requirement ({0}={1}) for resource: ' \
-                       '{2}/{0} in project: {3}. ' \
+    MESSAGE_TEMPLATE = 'Cannot validate profile requirement ({0}={1}) for ' \
+                       'resource: {2}/{0} in project: {3}. ' \
                        'Availability for this resource is not calculated.'
 
     @property

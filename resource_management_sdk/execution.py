@@ -204,4 +204,3 @@ class ExecutionRunner(object):
         )
 
         return self.wait_for_result(execution_id, node_instance_id)
-

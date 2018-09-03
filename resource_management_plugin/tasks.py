@@ -65,6 +65,3 @@ def execute_conditionally(ctx,
     ctx.logger.info(
         'Execution {} started successfully !'.format(execution)
     )
-
-
-

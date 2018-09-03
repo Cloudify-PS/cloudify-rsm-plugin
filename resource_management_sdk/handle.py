@@ -286,8 +286,8 @@ class OpenstackQuotaHandler(SimpleQuotaHandler):
                             runtime_property_value):
         rsm_ctx.log(
             'debug',
-            'Found openstack quota dict value defined in "{1}" runtime property. '
-            'Looking for quota for each of openstack components.',
+            'Found openstack quota dict value defined in "{1}" runtime '
+            'property. Looking for quota for each of openstack components.',
             value_type,
             runtime_property_name
         )

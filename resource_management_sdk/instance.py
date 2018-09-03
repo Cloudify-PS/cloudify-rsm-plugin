@@ -109,8 +109,8 @@ class WorkflowCtxInstanceAdapter(Instance):
             instance_ctx.node.type_hierarchy,
             instance_ctx.node.properties,
             instance_ctx._node_instance.runtime_properties
-            # TODO Replace above with proper method of getting runtime_properties
-            # TODO from WorkflowNodeInstance !!!
+            # TODO Replace above with proper method of getting runtime
+            # TODO properties from WorkflowNodeInstance !!!
         )
 
 
