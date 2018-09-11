@@ -176,9 +176,9 @@ class _RuntimePropertyHandlerBase(Handler):
             return
 
         rsm_ctx.log(
-            'debug'
+            'debug',
             'Not supported {1} type "{0}" of runtime property "{2}"',
-            type(runtime_property_value),
+            repr(runtime_property_value),
             value_type,
             runtime_property_name
         )
