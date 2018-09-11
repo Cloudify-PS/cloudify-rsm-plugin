@@ -37,6 +37,7 @@ class TestInit(unittest.TestCase):
                                                             'c': 'd'}
         _ctx = Mock()
         _client = Mock()
+        _client.node_instances = Mock()
         _ctx.node_instances = [_instances_ctx]
         engine = sdk.Engine(_ctx, _client)
         return engine, _client, _ctx, _instances_ctx
