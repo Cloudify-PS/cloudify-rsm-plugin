@@ -176,9 +176,9 @@ class _RuntimePropertyHandlerBase(Handler):
             return
 
         rsm_ctx.log(
-            'debug'
+            'debug',
             'Not supported {1} type "{0}" of runtime property "{2}"',
-            type(runtime_property_value),
+            repr(runtime_property_value),
             value_type,
             runtime_property_name
         )
@@ -286,8 +286,8 @@ class OpenstackQuotaHandler(SimpleQuotaHandler):
                             runtime_property_value):
         rsm_ctx.log(
             'debug',
-            'Found openstack quota dict value defined in "{1}" runtime property. '
-            'Looking for quota for each of openstack components.',
+            'Found openstack quota dict value defined in "{1}" runtime '
+            'property. Looking for quota for each of openstack components.',
             value_type,
             runtime_property_name
         )

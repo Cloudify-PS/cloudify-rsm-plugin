@@ -12,7 +12,7 @@ def get_profile(rest_client, profile_name, profile_str):
             'need to be defined. Both are empty.'
         )
 
-    return profile_name
+    return profile_str
 
 
 def _get_profile_from_secret_store(rest_client, profile_name):
