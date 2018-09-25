@@ -19,8 +19,22 @@ from .instance import (
 
 
 class ResourceManagementContext(object):
+    """Container for collected resources information
+
+    Attributes:
+        logger: logger instance
+        rest_client: rest client instance
+        execution_runner: ExecutionRunner instance
+        _collected_data: collected data
+        _instances: list instances
+        _result_instance_ids: list instances ids"""
 
     def __init__(self, ctx, rest_client):
+        """Class constructor.
+
+        Args:
+            ctx: cloudify context instance
+            rest_client: rest client instance"""
         self.logger = ctx.logger
         self.rest_client = rest_client
         self.execution_runner = ExecutionRunner(self.log, rest_client)
@@ -34,6 +48,10 @@ class ResourceManagementContext(object):
 
     @property
     def collected_data(self):
+        """Return currently collected data.
+
+        Returns:
+            dictionary with collected data, as key used resource key."""
         result = {}
 
         for resource_key, resource_data in self._collected_data.iteritems():
@@ -44,6 +62,10 @@ class ResourceManagementContext(object):
 
     @property
     def collected_data_dict(self):
+        """Return currently collected data.
+
+        Returns:
+            dictionary with collected data with merged resource keys."""
         def merge(dst, src):
             for k, v in src.iteritems():
                 if k in dst and \
@@ -62,21 +84,44 @@ class ResourceManagementContext(object):
 
     @property
     def collected_data_raw(self):
+        """Return currently collected data.
+
+        Returns:
+            Raw collected data."""
         return self._collected_data
 
     @property
     def instance(self):
+        """Current instance.
+
+        Returns:
+            return internal state for current instance."""
         return self._instances.current_instance
 
     @property
     def project(self):
+        """Current project.
+
+        Returns:
+            return internal state for current project."""
         return self._instances.current_project
 
     @property
     def result_instances(self):
+        """List id's for processed instances.
+
+        Returns:
+            list id's"""
         return self._result_instance_ids
 
     def get_resource_key(self, resource_name=None):
+        """Return current resource key
+
+        Args:
+            resource_name: resource name for replace if need.
+
+        Returns:
+            resource key."""
         return ResourceKey(
             self.project,
             self.instance.system_name,
@@ -85,6 +130,12 @@ class ResourceManagementContext(object):
         )
 
     def log(self, level, message, *args):
+        """Log message
+
+        Args:
+            level: log level
+            message: text message
+            *args: additional parameters"""
         method = getattr(self.logger, level, None)
 
         if method:
@@ -92,6 +143,7 @@ class ResourceManagementContext(object):
             method('[{0}] {1}'.format(self.instance.id, message))
 
     def log_state(self):
+        """Dump current state."""
         self.logger.info(
             '\n\nCurrent {0} state: \ncurrent_project: {1} \n'
             'instances: {2} \ninstance: {3}\n'
@@ -104,6 +156,10 @@ class ResourceManagementContext(object):
         )
 
     def next_instance(self):
+        """Process next instance
+
+        Returns:
+            next instance"""
         instance = self._instances.next_instance()
         if instance:
             self.log_state()
@@ -111,6 +167,10 @@ class ResourceManagementContext(object):
         return instance
 
     def reset(self):
+        """Reset state to initial
+
+        Returns:
+            initial instance"""
         instance = self._instances.reset()
         if instance:
             self.log_state()
@@ -118,6 +178,11 @@ class ResourceManagementContext(object):
         return instance
 
     def resolve_project(self):
+        """Select instances related to project.
+
+        Returns:
+            True, if deployment/project defined and can get instances related
+                to resource."""
         properties = self.instance.properties
         deployment_id = properties.get(PROPERTY_DEPLOYMENT_ID, None)
         project_name = properties.get(PROPERTY_PROJECT_NAME, None)
@@ -161,6 +226,16 @@ class ResourceManagementContext(object):
         return True
 
     def run_execution(self, operation_name=DEFAULT_OPERATION_NAME, wait=True):
+        """Run execution
+
+        Args:
+            operation_name: optional, operation name for run,
+                by default DEFAULT_OPERATION_NAME
+            wait: optional, wait for operation results, by default True
+
+        Returns:
+            If wait == True, returns executions results,
+            otherwise - execution_id."""
         execution_id = self.execution_runner.run(
             self.instance.deployment_id,
             self.instance.id,
@@ -185,12 +260,22 @@ class ResourceManagementContext(object):
         return execution_id
 
     def get_execution_result(self):
+        """Wait and return executions results
+
+        Returns:
+            Result of execution"""
         return self.execution_runner.wait_for_result(
             self.instance.execution_id,
             self.instance.id
         )
 
     def set_value(self, quota=None, usage=None, resource_name=None):
+        """Set usage/quota values for collected data.
+
+        Args:
+            quota: optional, quota for set,
+            usage: optional, usage for set,
+            resource_name: optional, resource name for set."""
         resource_key = self.get_resource_key(resource_name)
 
         if resource_key in self._collected_data:
@@ -208,7 +293,13 @@ class ResourceManagementContext(object):
                                runtime_properties,
                                instance_id=None,
                                update=False):
+        """Update runtime properties on cloudify manager.
 
+        Args:
+            runtime_properties: runtime properties for update
+            instance_id: optional, instance_id for update on manager.
+                if instance_id=None, will be used self.instance.id.
+            update: update runtime properties from inputs, by default False"""
         if not instance_id:
             instance_id = self.instance.id
 
@@ -233,6 +324,11 @@ class ResourceManagementContext(object):
         )
 
     def add_result_instance_id(self, instance_id=None):
+        """Add instance_id to resulted set.
+
+        Args:
+            instance_id: optional, instance_id for add to resulted set.
+                if instance_id=None, will be used self.instance.id."""
         if not instance_id:
             instance_id = self.instance.id
 
@@ -240,6 +336,10 @@ class ResourceManagementContext(object):
             self._result_instance_ids.append(instance_id)
 
     def dump(self):
+        """Dump current state and collected data.
+
+        Returns:
+            Return dictionary with collected data and instances."""
         return {
             'instances': self._instances.dump(),
             'availability': self.collected_data_dict
